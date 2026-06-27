@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Texas Hold'em</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #12131a;
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+/* ── MODAL ─────────────────────────────────── */
+#modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+}
+.modal-box {
+  background: #1a1d2e;
+  border: 1px solid #2a2d45;
+  border-radius: 18px;
+  padding: 38px 36px;
+  width: 360px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+}
+.modal-box h1 {
+  text-align: center;
+  font-size: 20px;
+  color: #e8c96e;
+  letter-spacing: 3px;
+  margin-bottom: 28px;
+}
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 11px;
+  color: #667;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 5px;
+}
+.field input {
+  width: 100%;
+  background: #0d0f1a;
+  border: 1px solid #2a3060;
+  border-radius: 9px;
+  color: #dde;
+  padding: 10px 13px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus { border-color: #4ecca3; }
+#btn-connect {
+  width: 100%;
+  background: linear-gradient(135deg, #e8c96e, #c9a84c);
+  border: none; border-radius: 10px;
+  color: #111; font-size: 15px; font-weight: 700;
+  padding: 13px; cursor: pointer; margin-top: 10px;
+  letter-spacing: 1px; transition: opacity 0.15s, transform 0.1s;
+}
+#btn-connect:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* ── HEADER ─────────────────────────────────── */
+#header {
+  width: 100%; max-width: 820px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 24px 0;
+}
+.logo { font-size: 17px; font-weight: 800; color: #e8c96e; letter-spacing: 2px; }
+#hud { font-size: 12px; color: #556; display: flex; align-items: center; gap: 14px; }
+#hud span.val { color: #aab; font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #333; display: inline-block; transition: all 0.3s; }
+.dot.on { background: #4ecca3; box-shadow: 0 0 8px #4ecca3; }
+
+/* ── GAME AREA ───────────────────────────────── */
+#game {
+  width: 100%; max-width: 820px;
+  padding: 10px 16px 20px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px;
+}
+
+/* ── CHIP STACK ──────────────────────────────── */
+.chip-wrap { display: inline-flex; gap: 3px; align-items: flex-end; min-height: 24px; }
+.chip-col  { position: relative; flex-shrink: 0; }
+.chip-d    { position: absolute; left: 0; border-radius: 50%;
+             box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+             border-top: 1.5px solid rgba(255,255,255,0.35);
+             border-bottom: 1.5px solid rgba(0,0,0,0.45); }
+
+/* ── OPP BADGE ───────────────────────────────── */
+.p-badge {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 30px;
+  padding: 8px 16px 8px 10px;
+  font-size: 13px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  min-width: 180px;
+}
+.p-badge.active { border-color: #e8c96e; box-shadow: 0 0 14px rgba(232,201,110,0.25); }
+.p-info  { display: flex; flex-direction: column; gap: 2px; }
+.p-name  { font-weight: 700; }
+.p-stack { color: #4ecca3; font-weight: 600; font-size: 12px; }
+.p-bet   { color: #e8c96e; font-size: 11px; background: rgba(232,201,110,0.1);
+           border: 1px solid rgba(232,201,110,0.25); border-radius: 20px;
+           padding: 2px 9px; display: none; }
+.p-tag   { font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+           border-radius: 8px; padding: 2px 7px; display: none; }
+.tag-fold  { background: rgba(220,60,60,0.2); color: #e96060; }
+.tag-allin { background: rgba(232,201,110,0.2); color: #e8c96e; }
+
+/* ── OPPONENT ACTION LABEL ───────────────────── */
+#opp-action {
+  min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 900;
+  color: #e8c96e;
+  text-shadow: 0 2px 12px rgba(232,201,110,0.45);
+  letter-spacing: 1px;
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+#opp-action.show { opacity: 1; }
+
+/* ── TABLE ───────────────────────────────────── */
+#table-wrap {
+  position: relative; width: 760px; height: 300px;
+  display: flex; align-items: center; justify-content: center;
+}
+#table {
+  width: 720px; height: 290px;
+  background: radial-gradient(ellipse at 50% 42%, #2e7d3a 0%, #256530 55%, #194821 100%);
+  border-radius: 50%;
+  border: 16px solid #3d1f08;
+  box-shadow: 0 0 0 2px #6b3512, 0 24px 60px rgba(0,0,0,0.85), inset 0 0 90px rgba(0,0,0,0.22);
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px;
+}
+#phase-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px; }
+#community   { display: flex; gap: 7px; align-items: center; min-height: 96px; }
+#pot-box     { display: none; flex-direction: column; align-items: center; gap: 4px; }
+#pot-chips   { display: inline-flex; gap: 4px; align-items: flex-end; min-height: 24px; }
+#pot-text    { font-size: 13px; color: #e8c96e; background: rgba(0,0,0,0.45);
+               border: 1px solid rgba(232,201,110,0.2); border-radius: 20px;
+               padding: 4px 14px; font-weight: 600; letter-spacing: 0.5px; }
+#overlay {
+  display: none; position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.62); align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #e8c96e;
+  z-index: 5; text-align: center; letter-spacing: 1px;
+}
+
+/* ── RESULT SCREEN ───────────────────────────── */
+#result-screen {
+  display: none;
+  position: fixed; inset: 0; z-index: 100;
+  align-items: center; justify-content: center; flex-direction: column;
+  gap: 12px; pointer-events: none;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+}
+@keyframes resultIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+#result-box {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  animation: resultIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  background: rgba(10,10,20,0.85);
+  border-radius: 24px; padding: 40px 60px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+#result-icon { font-size: 64px; line-height: 1; }
+#result-who  { font-size: 46px; font-weight: 900; letter-spacing: 2px; }
+#result-rank { font-size: 30px; font-weight: 700; color: #fff; opacity: 0.85; letter-spacing: 1px; }
+#result-chips{ font-size: 22px; color: #4ecca3; font-weight: 700; }
+
+/* ── CARDS ───────────────────────────────────── */
+@keyframes deal {
+  from { transform: translateY(-16px) scale(0.88); opacity: 0; }
+  to   { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+@keyframes cardGlow {
+  0%,100% { box-shadow: 2px 4px 12px rgba(0,0,0,0.45); }
+  50%     { box-shadow: 0 0 0 3px #e8c96e, 0 0 22px 8px rgba(232,201,110,0.55); }
+}
+
+.card {
+  width: 64px; height: 92px;
+  background: #fff;
+  border-radius: 8px; border: 1px solid #ccc;
+  box-shadow: 2px 4px 12px rgba(0,0,0,0.45);
+  position: relative;
+  animation: deal 0.28s ease-out;
+  user-select: none;
+  transition: transform 0.18s, opacity 0.3s, filter 0.3s;
+  flex-shrink: 0; overflow: hidden;
+}
+.card:hover { transform: translateY(-6px); }
+.card.red   { color: #cc0022; }
+.card.black { color: #0d0d0d; }
+
+/* Highlight: key cards for the hand */
+.card.highlight {
+  animation: deal 0.28s ease-out, cardGlow 0.9s ease-in-out 0.1s infinite !important;
+  border: 2px solid #e8c96e !important;
+  transform: translateY(-12px) !important;
+  z-index: 20;
+}
+/* Dim: non-key cards */
+.card.dim { opacity: 0.35; filter: grayscale(50%); }
+
+/* Top-left corner */
+.card-tl {
+  position: absolute; top: 4px; left: 5px;
+  display: flex; flex-direction: column; align-items: center;
+  line-height: 1.1; font-weight: 900;
+}
+.card-tl .rnk { font-size: 17px; }
+.card-tl .sut { font-size: 12px; margin-top: -2px; }
+
+/* Center large suit */
+.card-cs {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px; line-height: 1;
+}
+
+/* Bottom-right corner */
+.card-br {
+  position: absolute; bottom: 4px; right: 5px;
+  display: flex; flex-direction: column; align-items: center;
+  line-height: 1.1; font-weight: 900;
+  transform: rotate(180deg);
+}
+.card-br .rnk { font-size: 17px; }
+.card-br .sut { font-size: 12px; margin-top: -2px; }
+
+.card.back {
+  background: linear-gradient(145deg, #0f1e72 0%, #1a3a9f 50%, #0f1e72 100%);
+  border-color: #0a1560; overflow: hidden;
+}
+.card.back::after {
+  content: ''; position: absolute; inset: 5px;
+  border: 1.5px solid rgba(255,255,255,0.12); border-radius: 3px;
+  background: repeating-linear-gradient(45deg,
+    rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px,
+    transparent 2px, transparent 9px);
+}
+.card-ph {
+  width: 64px; height: 92px; border-radius: 8px;
+  border: 2px dashed rgba(255,255,255,0.12); flex-shrink: 0;
+}
+
+/* ── MY CARDS ZONE ───────────────────────────── */
+#my-zone { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#my-cards { display: flex; gap: 8px; }
+
+/* ── MY BIG INFO DISPLAY ─────────────────────── */
+#my-info {
+  width: 100%; max-width: 720px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: rgba(78,204,163,0.06);
+  border: 1px solid rgba(78,204,163,0.18);
+  border-radius: 20px;
+}
+#mi-left  { display: flex; align-items: center; gap: 14px; }
+#mi-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+#mi-name  {
+  font-size: 22px; font-weight: 900; color: rgba(255,255,255,0.9);
+  letter-spacing: 2px; text-transform: uppercase;
+}
+#mi-chips-num {
+  font-size: 48px; font-weight: 900; color: #4ecca3;
+  font-variant-numeric: tabular-nums; line-height: 1;
+  text-shadow: 0 0 24px rgba(78,204,163,0.35);
+  letter-spacing: -1px;
+}
+#mi-unit { font-size: 12px; color: #4ecca3; opacity: 0.5; letter-spacing: 2px; text-transform: uppercase; }
+#mi-bet-row { font-size: 13px; color: #e8c96e; min-height: 18px; }
+
+/* ── ACTION BAR ──────────────────────────────── */
+#action-bar {
+  width: 100%; max-width: 720px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; padding: 16px 18px;
+  transition: opacity 0.2s;
+}
+#action-bar.off { opacity: 0.3; pointer-events: none; }
+
+#raise-section { margin-bottom: 14px; }
+.raise-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+.raise-label  { font-size: 11px; color: #556; text-transform: uppercase; letter-spacing: 1px; }
+#raise-val    { font-size: 22px; font-weight: 700; color: #e8c96e; }
+
+.slider-track { position: relative; height: 32px; display: flex; align-items: center; }
+#raise-slider {
+  -webkit-appearance: none; width: 100%; height: 6px;
+  border-radius: 3px; background: #1a1d2e; outline: none; cursor: pointer;
+}
+#raise-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f5e07a, #c9a030);
+  cursor: pointer; border: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 10px rgba(200,160,40,0.6);
+}
+#raise-slider::-moz-range-thumb {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f5e07a, #c9a030);
+  cursor: pointer; border: 2px solid rgba(255,255,255,0.6);
+}
+
+/* Presets — only shown when opener */
+#preset-row { display: none; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.preset {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: #889; font-size: 11px; padding: 5px 12px;
+  cursor: pointer; transition: all 0.15s;
+}
+.preset:hover { background: rgba(232,201,110,0.12); border-color: rgba(232,201,110,0.35); color: #e8c96e; }
+
+#btns { display: flex; gap: 10px; }
+.btn {
+  flex: 1; padding: 14px 10px; border: none; border-radius: 11px;
+  font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+#b-fold  { background: rgba(220,60,60,0.12);   color: #e06060; border: 1px solid rgba(220,60,60,0.25); }
+#b-call  { background: rgba(78,204,163,0.12);  color: #4ecca3; border: 1px solid rgba(78,204,163,0.25); }
+#b-raise { background: rgba(232,201,110,0.12); color: #e8c96e; border: 1px solid rgba(232,201,110,0.28); }
+#b-fold:hover  { background: rgba(220,60,60,0.25);   box-shadow: 0 4px 16px rgba(220,60,60,0.25); }
+#b-call:hover  { background: rgba(78,204,163,0.25);  box-shadow: 0 4px 16px rgba(78,204,163,0.25); }
+#b-raise:hover { background: rgba(232,201,110,0.22); box-shadow: 0 4px 16px rgba(232,201,110,0.22); }
+
+/* ── TIMER ───────────────────────────────────── */
+#timer-wrap { display: none; align-items: center; gap: 10px; margin-bottom: 12px; }
+#timer-bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+#timer-bar    { height: 100%; width: 100%; background: #4ecca3; border-radius: 3px; transition: width 0.5s linear, background 0.3s; }
+#timer-num    { font-size: 16px; font-weight: 800; color: #4ecca3; min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; transition: color 0.3s; }
+#timer-num.urgent { color: #e06060; }
+</style>
+</head>
+<body>
+
+<!-- RESULT SCREEN (fixed full-screen) -->
+<div id="result-screen">
+  <div id="result-box">
+    <div id="result-icon">🏆</div>
+    <div id="result-who">나 승리!</div>
+    <div id="result-rank">풀하우스</div>
+    <div id="result-chips"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div class="modal-box">
+    <h1>♠ TEXAS HOLD'EM ♠</h1>
+    <div class="field"><label>서버 주소</label><input id="i-server" value="ws://localhost:8000/ws"></div>
+    <div class="field"><label>룸 ID</label><input id="i-room" value="ROOM1"></div>
+    <div class="field"><label>플레이어 ID</label><input id="i-pid" placeholder="alice / bob"></div>
+    <div class="field"><label>닉네임</label><input id="i-nick" placeholder="Alice"></div>
+    <button id="btn-connect" onclick="connect()">접속하기</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">♣ HOLD'EM</div>
+  <div id="hud">
+    <span class="dot" id="dot"></span>
+    룸 <span class="val" id="h-room">-</span> &nbsp;|&nbsp;
+    <span class="val" id="h-me">-</span>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game">
+
+  <!-- Opponent badge -->
+  <div id="opp-badge" class="p-badge" style="display:none">
+    <div class="chip-wrap" id="opp-chips"></div>
+    <div class="p-info">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span class="p-name" id="opp-name">?</span>
+        <span class="p-bet"  id="opp-bet"></span>
+        <span class="p-tag"  id="opp-tag"></span>
+      </div>
+      <span class="p-stack" id="opp-stack">-</span>
+    </div>
+  </div>
+
+  <!-- Opponent last action (big label) -->
+  <div id="opp-action"></div>
+
+  <!-- Opponent hole cards -->
+  <div id="opp-cards" style="display:flex;gap:8px"></div>
+
+  <!-- Table: community cards + pot -->
+  <div id="table-wrap">
+    <div id="table">
+      <div id="overlay"></div>
+      <span id="phase-label">대기 중</span>
+      <div id="community"></div>
+      <div id="pot-box">
+        <div id="pot-chips"></div>
+        <span id="pot-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- My hole cards -->
+  <div id="my-zone">
+    <div id="my-cards"></div>
+  </div>
+
+  <!-- My big info display -->
+  <div id="my-info" style="display:none">
+    <div id="mi-left">
+      <div class="chip-wrap" id="mi-chips"></div>
+      <div>
+        <div id="mi-name">—</div>
+        <div id="mi-bet-row"></div>
+      </div>
+    </div>
+    <div id="mi-right">
+      <div id="mi-chips-num">0</div>
+      <div id="mi-unit">CHIPS</div>
+    </div>
+  </div>
+
+  <!-- Action bar -->
+  <div id="action-bar" class="off">
+    <div id="timer-wrap">
+      <div id="timer-bar-bg"><div id="timer-bar"></div></div>
+      <span id="timer-num">30</span>
+    </div>
+    <div id="raise-section">
+      <div class="raise-header">
+        <span class="raise-label">레이즈 / 벳</span>
+        <span id="raise-val">—</span>
+      </div>
+      <div class="slider-track">
+        <input type="range" id="raise-slider" min="0" max="100000" step="100" value="0"
+               oninput="onSlide(this.value)">
+      </div>
+      <div id="preset-row">
+        <button class="preset" onclick="doPreset(0.33)">1/3 팟</button>
+        <button class="preset" onclick="doPreset(0.5)">하프 팟</button>
+        <button class="preset" onclick="doPreset(0.75)">3/4 팟</button>
+        <button class="preset" onclick="doPreset(1)">팟</button>
+        <button class="preset" onclick="doPreset(9999)">올인</button>
+      </div>
+    </div>
+    <div id="btns">
+      <button class="btn" id="b-fold"  onclick="act('fold', 0)">FOLD</button>
+      <button class="btn" id="b-call"  onclick="doCall()">CALL</button>
+      <button class="btn" id="b-raise" onclick="doRaise()">RAISE</button>
+    </div>
+  </div>
+
+</div><!-- #game -->
+
+<script>
+// ── State ──────────────────────────────────────
+let ws, myId = '', myNick = '', roomId = '';
+let myCards = [], pot = 0;
+let va = {};
+let raiseAmt = 0;
+let players  = {};
+let oppId    = null;
+let myStack  = 100000;
+let myBet    = 0;
+
+// ── Audio ──────────────────────────────────────
+let _audioCtx = null;
+function getAudio() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtx;
+}
+function playChipSound() {
+  try {
+    const ctx = getAudio(), now = ctx.currentTime;
+    [0, 0.045].forEach(d => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(1100, now+d);
+      o.frequency.exponentialRampToValueAtTime(220, now+d+0.08);
+      g.gain.setValueAtTime(0.2, now+d);
+      g.gain.exponentialRampToValueAtTime(0.001, now+d+0.1);
+      o.start(now+d); o.stop(now+d+0.11);
+    });
+  } catch(e) {}
+}
+function playDealSound() {
+  try {
+    const ctx = getAudio(), now = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(900, now);
+    o.frequency.exponentialRampToValueAtTime(450, now+0.06);
+    g.gain.setValueAtTime(0.08, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now+0.08);
+    o.start(now); o.stop(now+0.08);
+  } catch(e) {}
+}
+function playWinSound() {
+  try {
+    const ctx = getAudio(), now = ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, now+i*0.13);
+      g.gain.linearRampToValueAtTime(0.15, now+i*0.13+0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, now+i*0.13+0.35);
+      o.start(now+i*0.13); o.stop(now+i*0.13+0.36);
+    });
+  } catch(e) {}
+}
+
+// ── Chip stack ─────────────────────────────────
+// 100=yellow, 1000=blue, 10000=red
+const CHIP_DENOMS = [
+  {v:10000, base:'#8b0000', hi:'#e74c3c'},   // 빨강 10,000
+  {v:1000,  base:'#1a4a8a', hi:'#3498db'},   // 파랑  1,000
+  {v:100,   base:'#a07800', hi:'#f1c40f'},   // 노랑    100
+];
+
+function calcChips(amount) {
+  const stacks = [];
+  let rem = Math.min(Math.abs(amount), 9999999);
+  for (const d of CHIP_DENOMS) {
+    const n = Math.floor(rem / d.v);
+    if (n > 0) { stacks.push({...d, n: Math.min(n, 9)}); rem -= n * d.v; }
+  }
+  return stacks;
+}
+
+function renderChips(container, amount, chipW=20, chipH=9, gapY=5) {
+  container.innerHTML = '';
+  if (!amount || amount <= 0) return;
+  calcChips(amount).forEach(({base, hi, n}) => {
+    const col = document.createElement('div');
+    col.className = 'chip-col';
+    col.style.cssText = `width:${chipW}px;height:${(n-1)*gapY+chipH}px`;
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement('div');
+      d.className = 'chip-d';
+      d.style.cssText = `width:${chipW}px;height:${chipH}px;bottom:${i*gapY}px;` +
+        `background:linear-gradient(to bottom,${hi} 15%,${base} 85%)`;
+      col.appendChild(d);
+    }
+    container.appendChild(col);
+  });
+}
+
+// ── Timer ──────────────────────────────────────
+let timerInterval = null, timerDeadline = 0, timerTotal = 30;
+function startTimer(deadline) {
+  stopTimer();
+  timerDeadline = deadline;
+  timerTotal    = Math.max(1, deadline - Date.now()/1000);
+  id('timer-wrap').style.display = 'flex';
+  tickTimer();
+  timerInterval = setInterval(tickTimer, 500);
+}
+function tickTimer() {
+  const rem  = timerDeadline - Date.now()/1000;
+  const secs = Math.max(0, Math.ceil(rem));
+  const pct  = Math.max(0, Math.min(100, (rem/timerTotal)*100));
+  const n    = id('timer-num');
+  n.textContent = secs; n.className = secs <= 10 ? 'urgent' : '';
+  const bar = id('timer-bar');
+  bar.style.width      = pct + '%';
+  bar.style.background = secs <= 10 ? '#e06060' : '#4ecca3';
+  if (rem <= 0) { clearInterval(timerInterval); timerInterval = null; act('fold', 0); }
+}
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  id('timer-wrap').style.display = 'none';
+}
+
+// ── Opponent action label ──────────────────────
+let oppActionTimer = null;
+function showOppAction(text) {
+  const el = id('opp-action');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(oppActionTimer);
+  oppActionTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+function hideOppAction() {
+  clearTimeout(oppActionTimer);
+  id('opp-action').classList.remove('show');
+}
+
+// ── Result overlay ─────────────────────────────
+let resultTimer = null;
+function showResult(isWin, handRank, chipsWon) {
+  clearTimeout(resultTimer);
+  const wcolor = isWin ? '#e8c96e' : '#e06060';
+  id('result-icon').textContent   = isWin ? '🏆' : '💔';
+  id('result-who').textContent    = isWin ? '나 승리!' : '패  배';
+  id('result-who').style.color    = wcolor;
+  id('result-rank').textContent   = handRank || '';
+  id('result-chips').textContent  = chipsWon > 0 ? `+${chipsWon.toLocaleString()} 칩` : '';
+  id('result-chips').style.color  = '#4ecca3';
+  id('result-screen').style.display = 'flex';
+  resultTimer = setTimeout(() => { id('result-screen').style.display = 'none'; }, 4000);
+}
+
+// ── Card highlight ─────────────────────────────
+function getKeyCards(bestHand, rankStr) {
+  if (!bestHand?.length) return [];
+  const getR = c => (c.display || '').slice(0, -1);
+  const r    = (rankStr || '').toLowerCase();
+  // All-5 hands
+  if (/플러시|스트레이트|풀하우스/.test(rankStr || '')) {
+    return bestHand.map(c => c.display);
+  }
+  // Count ranks
+  const cnt = {};
+  bestHand.forEach(c => { const k = getR(c); cnt[k] = (cnt[k]||0)+1; });
+  // Quads
+  const q4 = Object.keys(cnt).filter(k => cnt[k] >= 4);
+  if (q4.length) return bestHand.filter(c => q4.includes(getR(c))).map(c => c.display);
+  // Trips
+  const q3 = Object.keys(cnt).filter(k => cnt[k] >= 3);
+  if (q3.length) return bestHand.filter(c => q3.includes(getR(c))).map(c => c.display);
+  // Pairs
+  const q2 = Object.keys(cnt).filter(k => cnt[k] >= 2);
+  if (q2.length) return bestHand.filter(c => q2.includes(getR(c))).map(c => c.display);
+  // High card: just top
+  return [bestHand[0]?.display].filter(Boolean);
+}
+
+function highlightHand(bestHand, rankStr) {
+  clearHighlights();
+  const keySet = new Set(getKeyCards(bestHand, rankStr));
+  document.querySelectorAll('.card[data-card]').forEach(el => {
+    const cd = el.getAttribute('data-card');
+    el.classList.add(keySet.has(cd) ? 'highlight' : 'dim');
+  });
+}
+function clearHighlights() {
+  document.querySelectorAll('.card').forEach(el => el.classList.remove('highlight', 'dim'));
+}
+
+// ── Connect ────────────────────────────────────
+function connect() {
+  const server = id('i-server').value.trim();
+  roomId = id('i-room').value.trim();
+  myId   = id('i-pid').value.trim();
+  myNick = id('i-nick').value.trim();
+  if (!myId || !myNick || !roomId) { alert('모든 필드를 입력하세요.'); return; }
+
+  ws = new WebSocket(`${server}/${roomId}/${myId}`);
+  ws.onopen    = onOpen;
+  ws.onmessage = e => handle(JSON.parse(e.data));
+  ws.onclose   = () => dot(false);
+  ws.onerror   = () => {};
+}
+
+function onOpen() {
+  ws.send(JSON.stringify({
+    event:'join_room', room_id:roomId, nickname:myNick,
+    starting_chips:100000, small_blind:500, big_blind:1000, turn_timeout:30,
+  }));
+  dot(true);
+  id('modal').style.display = 'none';
+  id('h-room').textContent  = roomId;
+  id('h-me').textContent    = myNick;
+  setMyInfo(myNick, 100000, 0);
+}
+
+// ── Event handler ──────────────────────────────
+function handle(ev) {
+  const e = ev.event;
+
+  if (e === 'player_joined') {
+    const pid = ev.player_id, nick = ev.nickname;
+    players[pid] = {nick, stack:100000, bet:0, folded:false, allin:false};
+    if (pid === myId) {
+      ws.send(JSON.stringify({event:'ready'}));
+    } else {
+      oppId = pid;
+      updateOppBadge(nick, 100000, 0, false, false);
+    }
+    if (ev.snapshot) applyState(ev.snapshot);
+  }
+
+  else if (e === 'player_left') {
+    const pid = ev.player_id;
+    if (pid !== myId) { oppId = null; id('opp-badge').style.display = 'none'; clearOppCards(); }
+    if (ev.snapshot) applyState(ev.snapshot);
+  }
+
+  else if (e === 'player_ready') { /* silent */ }
+
+  else if (e === 'deal_hole_cards') {
+    myCards = ev.cards;
+    renderMyCards(myCards);
+    renderOppCards(null, false);
+    clearHighlights();
+    hideOppAction();
+    playDealSound();
+  }
+
+  else if (e === 'game_state') {
+    applyState(ev);
+  }
+
+  else if (e === 'action_required') {
+    const target = ev.player_id;
+    va = ev.valid_actions || {};
+    if (target === myId) {
+      enableActions();
+      startTimer(ev.deadline);
+    } else {
+      stopTimer();
+      disableActions();
+    }
+    setActive(target);
+  }
+
+  else if (e === 'player_acted') {
+    const pid = ev.player_id, action = ev.action, amt = ev.amount || 0;
+    if (pid !== myId) {
+      showOppAction(fmtAction(action, amt));
+    }
+  }
+
+  else if (e === 'showdown') {
+    stopTimer(); disableActions();
+    renderComm(ev.community_cards || []);
+    const res     = ev.results || [];
+    const oppRes  = res.find(r => r.player_id !== myId);
+    const myRes   = res.find(r => r.player_id === myId);
+    if (oppRes) renderOppCards(oppRes.cards, true);
+    const isWin   = (myRes?.won || 0) > 0;
+    const winner  = res.find(r => r.won > 0);
+    if (isWin) playWinSound();
+    // Highlight winner's best hand
+    if (winner) highlightHand(winner.best_hand || [], winner.hand_rank || '');
+    // Show result overlay
+    if (myRes) showResult(isWin, myRes.hand_rank || '', myRes.won || 0);
+    myCards = [];
+    setActive(null);
+  }
+
+  else if (e === 'hand_end') {
+    stopTimer(); disableActions();
+    const won   = ev.winner;
+    const isMe  = won === myId;
+    if (isMe) playWinSound();
+    showResult(isMe, '상대 폴드', 0);
+    hideOppAction();
+    myCards = [];
+    renderMyCards([]);
+    setActive(null);
+  }
+
+  else if (e === 'game_over') {
+    stopTimer(); disableActions();
+    showOverlay('게임 종료');
+    setTimeout(hideOverlay, 3000);
+  }
+}
+
+// ── State ──────────────────────────────────────
+function applyState(ev) {
+  const phase = ev.phase || '';
+  const plist = ev.players || [];
+  const comm  = ev.community_cards || [];
+  pot = ev.pot || 0;
+
+  id('phase-label').textContent = PL(phase);
+
+  // Pot chips on table
+  const pb = id('pot-box');
+  if (pot > 0) {
+    pb.style.display = 'flex';
+    renderChips(id('pot-chips'), pot, 24, 11, 5);
+    id('pot-text').textContent = `POT  ${pot.toLocaleString()}`;
+  } else {
+    pb.style.display = 'none';
+  }
+
+  renderComm(comm);
+
+  plist.forEach(p => {
+    const pid = p.player_id;
+    players[pid] = {nick:p.nickname, stack:p.stack, bet:p.current_bet||0,
+                    folded:p.is_folded||false, allin:p.is_all_in||false};
+
+    if (pid === myId) {
+      myStack = p.stack;
+      myBet   = p.current_bet || 0;
+      setMyInfo(p.nickname || myNick, myStack, myBet);
+    } else {
+      oppId = pid;
+      updateOppBadge(p.nickname, p.stack, p.current_bet||0, p.is_folded||false, p.is_all_in||false);
+      if (!p.is_folded && phase !== 'WAITING') {
+        const hasRevealed = !!id('opp-cards').querySelector('.card:not(.back)');
+        const noCards     = id('opp-cards').children.length === 0;
+        if (hasRevealed || noCards) renderOppCards(null, false);
+      }
+    }
+  });
+
+  updateSliderRange();
+}
+
+function setMyInfo(name, stack, bet) {
+  id('mi-name').textContent      = name || myNick;
+  id('mi-chips-num').textContent = stack.toLocaleString();
+  id('mi-bet-row').textContent   = bet > 0 ? `베팅 ${bet.toLocaleString()}` : '';
+  id('my-info').style.display    = 'flex';
+  renderChips(id('mi-chips'), stack);
+}
+
+function updateOppBadge(nick, stack, bet, folded, allin) {
+  const badge = id('opp-badge');
+  badge.style.display = 'flex';
+  id('opp-name').textContent  = nick;
+  id('opp-stack').textContent = `${stack.toLocaleString()}칩`;
+  renderChips(id('opp-chips'), stack);
+
+  const betEl = id('opp-bet');
+  betEl.style.display = bet > 0 ? 'inline' : 'none';
+  if (bet > 0) betEl.textContent = `베팅 ${bet.toLocaleString()}`;
+
+  const tagEl = id('opp-tag');
+  if (folded)      { tagEl.className='p-tag tag-fold';  tagEl.textContent='폴드'; tagEl.style.display='inline'; }
+  else if (allin)  { tagEl.className='p-tag tag-allin'; tagEl.textContent='올인'; tagEl.style.display='inline'; }
+  else             { tagEl.style.display='none'; }
+}
+
+// ── Cards ──────────────────────────────────────
+function mkCard(card, back) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  if (back) { el.classList.add('back'); return el; }
+  const display = card?.display || '??';
+  el.setAttribute('data-card', display);
+  const suit  = display.slice(-1);
+  const rank  = display.slice(0, -1);
+  const isRed = suit === '♥' || suit === '♦';
+  el.classList.add(isRed ? 'red' : 'black');
+
+  const tl = document.createElement('div');
+  tl.className = 'card-tl';
+  tl.innerHTML = `<span class="rnk">${rank}</span><span class="sut">${suit}</span>`;
+
+  const cs = document.createElement('div');
+  cs.className = 'card-cs';
+  cs.textContent = suit;
+
+  const br = document.createElement('div');
+  br.className = 'card-br';
+  br.innerHTML = `<span class="rnk">${rank}</span><span class="sut">${suit}</span>`;
+
+  el.append(tl, cs, br);
+  return el;
+}
+
+function mkPh() { const d=document.createElement('div'); d.className='card-ph'; return d; }
+
+function renderMyCards(cards) {
+  const el = id('my-cards');
+  el.innerHTML = '';
+  if (!cards?.length) { el.append(mkPh(), mkPh()); return; }
+  cards.forEach(c => el.appendChild(mkCard(c, false)));
+}
+function renderOppCards(cards, faceUp) {
+  const el = id('opp-cards');
+  el.innerHTML = ''; el.style.display = 'flex';
+  if (faceUp && cards?.length) cards.forEach(c => el.appendChild(mkCard(c, false)));
+  else el.append(mkCard(null,true), mkCard(null,true));
+}
+function clearOppCards() { id('opp-cards').innerHTML = ''; }
+function renderComm(cards) {
+  const el = id('community');
+  el.innerHTML = '';
+  for (let i = 0; i < 5; i++) el.appendChild(cards[i] ? mkCard(cards[i], false) : mkPh());
+}
+
+// ── Actions ────────────────────────────────────
+function enableActions() {
+  id('action-bar').classList.remove('off');
+  const bc=id('b-call'), br=id('b-raise'), rs=id('raise-section');
+  bc.style.display='none'; br.style.display='none';
+  rs.style.display='none'; id('preset-row').style.display='none';
+
+  if (va.is_opening) {
+    if (va.check) { bc.style.display='block'; bc.textContent='CHECK'; bc.onclick=()=>act('check',0); }
+    if (va.raise) {
+      rs.style.display='block'; br.textContent='BET'; br.style.display='block';
+      id('preset-row').style.display='flex';
+    }
+  } else {
+    if (va.call) {
+      bc.style.display='block';
+      bc.textContent = `CALL  ${(va.call_amount||0).toLocaleString()}`;
+      bc.onclick=()=>act('call',0);
+    }
+    if (va.raise) { rs.style.display='block'; br.textContent='RAISE'; br.style.display='block'; }
+  }
+  updateSliderRange();
+}
+
+function disableActions() {
+  id('action-bar').classList.add('off');
+  id('preset-row').style.display='none';
+}
+
+function updateSliderRange() {
+  const sl  = id('raise-slider');
+  const min = va.raise ? (va.min_raise || 1000) : 0;
+  const max = va.allin ? (va.allin_amount || myStack) : myStack;
+  sl.min=min; sl.max=max; sl.value=min;
+  onSlide(min);
+}
+
+function onSlide(v) {
+  // Snap to nearest 100
+  raiseAmt = Math.round(parseInt(v) / 100) * 100;
+  id('raise-val').textContent = `${raiseAmt.toLocaleString()}칩`;
+  const sl=id('raise-slider'), mn=parseInt(sl.min)||0, mx=parseInt(sl.max)||100000;
+  const pct = mx>mn ? ((v-mn)/(mx-mn))*100 : 0;
+  sl.style.background =
+    `linear-gradient(to right,#c9a030 0%,#e8c96e ${pct}%,#1a1d2e ${pct}%,#1a1d2e 100%)`;
+}
+
+function doPreset(ratio) {
+  const sl=id('raise-slider'), mn=parseInt(sl.min), mx=parseInt(sl.max);
+  let v = ratio >= 9999 ? mx : Math.round(pot * ratio / 100) * 100;
+  v = Math.max(mn, Math.min(mx, v));
+  sl.value=v; onSlide(v);
+}
+
+function doCall() { va.check ? act('check',0) : act('call',0); }
+
+function doRaise() {
+  if (!va.raise && va.allin) { act('allin',0); return; }
+  const allinAmt = va.allin_amount || myStack;
+  raiseAmt >= allinAmt ? act('allin',0) : act('raise', raiseAmt);
+}
+
+function act(action, amount) {
+  if (!ws || ws.readyState !== 1) return;
+  stopTimer();
+  if (action !== 'fold') playChipSound();
+  ws.send(JSON.stringify({event:'player_action', action, amount}));
+  disableActions();
+}
+
+// ── UI helpers ─────────────────────────────────
+function id(s) { return document.getElementById(s); }
+function dot(on) { id('dot').className = 'dot' + (on?' on':''); }
+
+function setActive(pid) {
+  id('opp-badge').classList.toggle('active', pid !== null && pid !== myId);
+}
+
+function showOverlay(txt) {
+  const ov=id('overlay'); ov.style.display='flex'; ov.textContent=txt;
+}
+function hideOverlay() { id('overlay').style.display='none'; }
+
+function fmtAction(action, amt) {
+  const m = { fold:'FOLD ✕', check:'CHECK ✓',
+              call:`CALL  ${amt.toLocaleString()}`,
+              raise:`RAISE  ${amt.toLocaleString()}`,
+              allin:`ALL-IN  ${amt.toLocaleString()}` };
+  return m[action] || action.toUpperCase();
+}
+
+function PL(phase) {
+  return {WAITING:'대기 중', STARTING:'시작 중', PRE_FLOP:'프리플랍',
+          FLOP:'플랍', TURN:'턴', RIVER:'리버',
+          SHOWDOWN:'쇼다운', HAND_END:'핸드 종료'}[phase] || phase;
+}
+</script>
+</body>
+</html>
