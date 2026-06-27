@@ -81,6 +81,9 @@ class GameState:
         self.betting_round: Optional[BettingRound] = None
         self.hand_history: list[dict] = []
         self.turn_deadline: Optional[float] = None
+        self.dealer_id: Optional[str] = None
+        self.sb_id: Optional[str] = None
+        self.bb_id: Optional[str] = None
 
     # ------------------------------------------------------------------ seats
     def add_player(self, player_id: str, nickname: str) -> bool:
@@ -145,9 +148,12 @@ class GameState:
         stacks = {pid: self.seats[pid].stack for pid in active}
         self.betting_round = BettingRound(players=active, stacks=stacks)
 
-        # post blinds
+        # track dealer/blinds for public state
+        self.dealer_id = active[self.dealer_index]
         sb_id = active[sb_index]
         bb_id = active[bb_index]
+        self.sb_id = sb_id
+        self.bb_id = bb_id
         sb_paid = self.betting_round.post_blind(sb_id, self.small_blind)
         bb_paid = self.betting_round.post_blind(bb_id, self.big_blind)
         self._sync_stacks_from_betting()
@@ -171,9 +177,6 @@ class GameState:
         events.append({
             "event": "game_state",
             **self._public_state(active),
-            "dealer": active[self.dealer_index],
-            "sb": sb_id,
-            "bb": bb_id,
             "sb_paid": sb_paid,
             "bb_paid": bb_paid,
         })
@@ -191,17 +194,27 @@ class GameState:
         if player_id != current_pid:
             return [{"event": "error", "code": "NOT_YOUR_TURN", "player_id": player_id}]
 
+        prev_bet = self.betting_round.current_bets.get(player_id, 0)
+        was_opening = self.betting_round.current_max_bet == 0
         self.betting_round.apply_action(player_id, action, amount)
         self._sync_stacks_from_betting()
+        display_amount = self.betting_round.current_bets.get(player_id, 0) - prev_bet
+        display_action = "bet" if action == "raise" and was_opening else action
+        display_text = self._format_action_text(display_action, display_amount)
 
         events.append({"event": "player_acted", "player_id": player_id,
-                       "action": action, "amount": amount})
+                       "action": action, "amount": amount,
+                       "display_action": display_action,
+                       "display_amount": display_amount,
+                       "display_text": display_text})
 
         # check if only one player remains
         still_in = [p for p in active if p not in self.betting_round.folded]
         if len(still_in) == 1:
             winner = still_in[0]
             self.pot += sum(self.betting_round.current_bets.values())
+            for pid in self.betting_round.players:
+                self.seats[pid].total_contribution += self.betting_round.total_contributions.get(pid, 0)
             self.seats[winner].stack += self.pot
             self.pot = 0
             self.phase = Phase.HAND_END
@@ -209,9 +222,13 @@ class GameState:
             return events
 
         if self.betting_round.is_round_over(active):
+            # Show the closing action's chips before the next street collects them.
+            events.append({"event": "game_state", **self._public_state(active)})
             events += self._advance_phase(active)
         else:
             self._next_player(active)
+            # 매 액션 후 game_state 전송 → 베팅존/팟 즉시 갱신
+            events.append({"event": "game_state", **self._public_state(active)})
             events.append(self._action_required_event(active))
 
         return events
@@ -221,9 +238,9 @@ class GameState:
         events: list[dict] = []
 
         # collect bets into pot
-        round_pot = sum(self.betting_round.current_bets[p] for p in active)
+        round_pot = sum(self.betting_round.current_bets.values())
         self.pot += round_pot
-        for pid in active:
+        for pid in self.betting_round.players:
             self.seats[pid].total_contribution += self.betting_round.total_contributions.get(pid, 0)
 
         still_in = [p for p in active if p not in self.betting_round.folded]
@@ -353,11 +370,28 @@ class GameState:
     def _public_state(self, active: list[str]) -> dict:
         return {
             "phase": self.phase.value,
-            "pot": self.pot,
+            "pot": self.pot,   # 다음 스테이지 전환 시에만 누적 (현재 스트리트 베팅은 bet-zone에 표시)
             "community_cards": [c.to_dict() for c in self.community_cards],
             "current_player": active[self.current_player_index % len(active)] if active else None,
             "players": [self.seats[pid].to_public_dict() for pid in self.seat_order if pid in self.seats],
+            "dealer": self.dealer_id,
+            "sb": self.sb_id,
+            "bb": self.bb_id,
         }
+
+    def _format_action_text(self, action: str, amount: int) -> str:
+        labels = {
+            "fold": "FOLD",
+            "check": "CHECK",
+            "call": "CALL",
+            "bet": "BET",
+            "raise": "RAISE",
+            "allin": "ALL-IN",
+        }
+        label = labels.get(action, action.upper())
+        if action in ("fold", "check"):
+            return label
+        return f"{label} {amount:,}"
 
     def _action_required_event(self, active: list[str]) -> dict:
         pid = active[self.current_player_index % len(active)]

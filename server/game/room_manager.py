@@ -10,7 +10,8 @@ class Room:
     room_id: str
     host_id: str
     game: GameState
-    websockets: dict = field(default_factory=dict)  # player_id -> WebSocket
+    websockets: dict = field(default_factory=dict)   # player_id -> WebSocket
+    ai_players: set  = field(default_factory=set)    # AI bot player_ids
 
     def is_empty(self) -> bool:
         return len(self.websockets) == 0
