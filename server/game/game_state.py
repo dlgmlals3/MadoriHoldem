@@ -8,6 +8,9 @@ from .card import Card, Deck
 from .hand_evaluator import best_hand, hand_rank_name
 from .betting import BettingRound, compute_pots
 
+# 카드 딜 애니메이션 대기 시간 (main.py DEAL_DELAY 와 동기화)
+_DEAL_DELAY = 3.5
+
 
 class Phase(str, Enum):
     WAITING = "WAITING"
@@ -141,12 +144,21 @@ class GameState:
             s.total_contribution = 0
 
         # advance dealer button
-        self.dealer_index = (self.dealer_index + 1) % len(active)
-        sb_index = (self.dealer_index + 1) % len(active)
-        bb_index = (self.dealer_index + 2) % len(active)
+        n = len(active)
+        self.dealer_index = (self.dealer_index + 1) % n
+
+        if n == 2:
+            # 헤즈업: 버튼 = SB (프리플랍에서 먼저 행동), 상대 = BB
+            sb_index  = self.dealer_index
+            bb_index  = (self.dealer_index + 1) % n
+            utg_index = self.dealer_index   # SB/버튼이 프리플랍 선행
+        else:
+            sb_index  = (self.dealer_index + 1) % n
+            bb_index  = (self.dealer_index + 2) % n
+            utg_index = (bb_index + 1) % n  # UTG = BB 왼쪽
 
         stacks = {pid: self.seats[pid].stack for pid in active}
-        self.betting_round = BettingRound(players=active, stacks=stacks)
+        self.betting_round = BettingRound(players=active, stacks=stacks, min_bet=self.big_blind)
 
         # track dealer/blinds for public state
         self.dealer_id = active[self.dealer_index]
@@ -168,11 +180,10 @@ class GameState:
                 "cards": [card1.to_dict(), card2.to_dict()],
             })
 
-        # UTG acts first pre-flop
-        utg_index = (bb_index + 1) % len(active)
         self.current_player_index = utg_index
         self.phase = Phase.PRE_FLOP
-        self.turn_deadline = time.time() + self.turn_timeout
+        # 딜 애니메이션(_DEAL_DELAY) 이 끝난 뒤부터 실제 카운트다운 시작
+        self.turn_deadline = time.time() + _DEAL_DELAY + self.turn_timeout
 
         events.append({
             "event": "game_state",
@@ -246,11 +257,12 @@ class GameState:
         still_in = [p for p in active if p not in self.betting_round.folded]
         non_allin = [p for p in still_in if p not in self.betting_round.all_in]
 
-        # reset bets for next street
+        # reset bets for next street — carry over folds so indices stay stable
+        prev_folded = self.betting_round.folded.copy()
         new_stacks = {pid: self.seats[pid].stack for pid in active}
-        self.betting_round = BettingRound(players=active, stacks=new_stacks)
-        # Restore all-in status: players with 0 chips are still all-in next street
+        self.betting_round = BettingRound(players=active, stacks=new_stacks, min_bet=self.big_blind)
         self.betting_round.all_in = {pid for pid in active if new_stacks[pid] == 0}
+        self.betting_round.folded = prev_folded
 
         if self.phase == Phase.PRE_FLOP:
             self.deck.burn()
@@ -293,13 +305,16 @@ class GameState:
         total_contributions = {
             pid: self.seats[pid].total_contribution for pid in active
         }
-        pots = compute_pots(total_contributions)
+        # folded 플레이어 칩은 팟에 포함되지만 수령 자격 없음
+        pots = compute_pots(total_contributions,
+                            folded_pids=self.betting_round.folded)
 
         results: list[dict] = []
         for pid in still_in:
             score, best5 = best_hand(self.seats[pid].hole_cards, self.community_cards)
             results.append({
                 "player_id": pid,
+                "nickname": self.seats[pid].nickname,
                 "cards": [c.to_dict() for c in self.seats[pid].hole_cards],
                 "best_hand": [c.to_dict() for c in best5],
                 "hand_rank": hand_rank_name(score),
@@ -331,9 +346,11 @@ class GameState:
 
     # ------------------------------------------------------------------ helpers
     def _active_players(self) -> list[str]:
+        # 인덱스 안정성을 위해 폴드된 플레이어를 제외하지 않음.
+        # 파산(칩 0이고 올인 아님) 플레이어만 제외.
         return [pid for pid in self.seat_order
-                if pid in self.seats and self.seats[pid].stack >= 0
-                and not self.seats[pid].is_folded]
+                if pid in self.seats
+                and (self.seats[pid].stack > 0 or self.seats[pid].is_all_in)]
 
     def _sync_stacks_from_betting(self) -> None:
         if self.betting_round is None:

@@ -15,6 +15,7 @@ from game.ai_strategy import decide_action
 
 room_manager = RoomManager()
 AI_TURN_TIMEOUT = 3.0
+DEAL_DELAY     = 3.5   # 클라이언트 카드 딜 애니메이션 대기 (초)
 
 AI_NICK_POOL = ["Bot-강철", "Bot-여우", "Bot-독수리", "Bot-호랑이",
                 "Bot-늑대", "Bot-곰", "Bot-사자", "Bot-표범"]
@@ -56,6 +57,9 @@ async def dispatch_events(room_id: str, events: list[dict]) -> None:
     if room is None:
         return
 
+    # deal_hole_cards 포함 배치는 첫 action_required 전에 DEAL_DELAY 대기
+    has_deal = any(e.get("event") == "deal_hole_cards" for e in events)
+
     for i, ev in enumerate(events):
         if ev.get("event") == "action_required" and ev.get("player_id") in room.ai_players:
             room.game.turn_deadline = time.time() + AI_TURN_TIMEOUT
@@ -70,6 +74,9 @@ async def dispatch_events(room_id: str, events: list[dict]) -> None:
             nxt = events[i + 1] if i + 1 < len(events) else None
             if nxt and nxt.get("event") in ("game_state", "showdown"):
                 await asyncio.sleep(1.5)
+            elif has_deal and nxt and nxt.get("event") == "action_required":
+                # 카드 딜 애니메이션이 끝날 때까지 첫 action_required 지연
+                await asyncio.sleep(DEAL_DELAY)
 
     last_ev = events[-1].get("event") if events else None
 
@@ -111,14 +118,22 @@ async def _ai_act(room_id: str, player_id: str) -> None:
 
 async def _auto_start_next_hand(room_id: str) -> None:
     await asyncio.sleep(5)
-    room = room_manager.get_room(room_id)
-    if room is None:
-        return
-    for pid in room.game.seat_order:
-        room.game.set_ready(pid)
-    if room.game.can_start():
-        events = room.game.start_hand()
+    try:
+        room = room_manager.get_room(room_id)
+        if room is None:
+            return
+        g = room.game
+        for pid in list(g.seat_order):
+            g.set_ready(pid)
+        ready = [p for p in g.seat_order if g.seats[p].is_ready and g.seats[p].stack > 0]
+        if len(ready) < 2 or g.phase not in (Phase.HAND_END, Phase.WAITING):
+            print(f"[AUTO_START] {room_id}: skip — phase={g.phase}, ready_with_chips={len(ready)}")
+            return
+        events = g.start_hand()
         await dispatch_events(room_id, events)
+    except Exception as e:
+        import traceback
+        print(f"[AUTO_START ERROR] {room_id}: {e}\n{traceback.format_exc()}")
 
 
 def _fill_ai_bots(room_id: str) -> None:

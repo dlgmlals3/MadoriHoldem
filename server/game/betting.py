@@ -8,11 +8,18 @@ class PotSlice:
     eligible: list[str]  # player_ids who can win this slice
 
 
-def compute_pots(contributions: dict[str, int]) -> list[PotSlice]:
+def compute_pots(
+    contributions: dict[str, int],
+    folded_pids: set[str] | None = None,
+) -> list[PotSlice]:
     """
     Build main pot + side pots from per-player chip contributions.
-    contributions: {player_id: total_chips_put_in_this_hand}
+    contributions : {player_id: total_chips_put_in_this_hand}
+    folded_pids   : players who folded — contribute chips but cannot win any pot
     """
+    if folded_pids is None:
+        folded_pids = set()
+
     if not contributions:
         return []
 
@@ -25,8 +32,14 @@ def compute_pots(contributions: dict[str, int]) -> list[PotSlice]:
 
     while remaining:
         min_contrib = min(remaining.values())
-        pot_amount = min_contrib * len(remaining)
-        eligible = list(remaining.keys())
+        pot_amount  = min_contrib * len(remaining)
+
+        # 폴드한 플레이어는 칩을 넣었어도 수령 자격 없음
+        eligible = [pid for pid in remaining if pid not in folded_pids]
+        # 만약 살아있는 플레이어가 없으면(극단적 엣지케이스) 전체 허용
+        if not eligible:
+            eligible = list(remaining.keys())
+
         pots.append(PotSlice(amount=pot_amount, eligible=eligible))
 
         remaining = {pid: amt - min_contrib for pid, amt in remaining.items()}
@@ -39,6 +52,7 @@ def compute_pots(contributions: dict[str, int]) -> list[PotSlice]:
 class BettingRound:
     players: list[str]                  # ordered active player ids
     stacks: dict[str, int]              # current chip stacks
+    min_bet: int = 0                    # 최소 베팅 단위 (= big blind); 레이즈 최솟값의 하한
     current_bets: dict[str, int] = field(default_factory=dict)
     total_contributions: dict[str, int] = field(default_factory=dict)
     current_max_bet: int = 0
@@ -71,7 +85,8 @@ class BettingRound:
         stack = self.stacks[player_id]
         my_bet = self.current_bets[player_id]
         call_amount = min(self.current_max_bet - my_bet, stack)
-        min_raise = max(self.last_raise_amount, 1)
+        # 최소 레이즈 = max(직전 레이즈 크기, BB 금액) — 최소 1칩 보장
+        min_raise = max(self.last_raise_amount, self.min_bet, 1)
         can_check = self.current_max_bet == my_bet
 
         # Can't raise if all other active (non-folded) players are already all-in

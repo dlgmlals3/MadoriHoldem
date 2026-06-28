@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//tmp/poker-ts/src/lib/**)",
+      "Bash(cat /tmp/poker-ts/README.md | head -80)",
+      "Read(//tmp/poker-ts/**)"
+    ]
+  }
+}

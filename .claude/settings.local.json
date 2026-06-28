@@ -3,7 +3,11 @@
     "allow": [
       "PowerShell(cd \"d:\\\\Workspace\\\\HoldemServer\\\\server\"; $proc = Start-Process python -ArgumentList \"-m uvicorn main:app --host 0.0.0.0 --port 8000\" -PassThru -WindowStyle Hidden; Start-Sleep -Seconds 3; try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -UseBasicParsing -TimeoutSec 5; $r.Content } catch { $_.Exception.Message }; $proc.Kill\\(\\))",
       "PowerShell(netstat -ano)",
-      "PowerShell(Get-Process python -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Process python -ErrorAction SilentlyContinue)",
+      "PowerShell(pip install fastapi \"uvicorn[standard]\" websockets pytest 2>&1)",
+      "PowerShell(python --version)",
+      "PowerShell(python -m pip --version)",
+      "PowerShell(python -m pip install fastapi \"uvicorn[standard]\" websockets pytest 2>&1)"
     ]
   }
 }
