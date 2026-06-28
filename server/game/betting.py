@@ -11,50 +11,70 @@ class PotSlice:
 def compute_pots(
     contributions: dict[str, int],
     folded_pids: set[str] | None = None,
-) -> list[PotSlice]:
+) -> tuple[list[PotSlice], dict[str, int]]:
     """
-    Build main pot + side pots from per-player chip contributions.
-    contributions : {player_id: total_chips_put_in_this_hand}
-    folded_pids   : players who folded — contribute chips but cannot win any pot
+    레이어 방식 팟 계산 (NL Hold'em 공식 규칙).
+
+    contributions : {player_id: 핸드 전체 누적 기여 칩}
+    folded_pids   : 폴드한 플레이어 — 칩은 팟에 포함, 수령 자격 없음
+
+    반환값:
+    - pots    : 쇼다운 배분 대상 PotSlice 리스트
+    - uncalled : {player_id: 반환 칩} — 상대가 없어 경쟁 불가한 초과 베팅 (Uncalled Bet)
+
+    알고리즘 (공식 문서 Section 20):
+    1. totalContribution의 고유 양수 금액을 오름차순 정렬 → 레이어 기준점
+    2. 각 레이어에서 해당 금액 이상 기여한 contributors 수만큼 layerAmount 계산
+    3. contributors가 1명뿐이면 → Uncalled Bet (상대 없음, 반환 처리)
+    4. contributors가 2명 이상 → 폴드 제외 eligible 플레이어로 PotSlice 생성
+    5. 인접한 동일 eligible 슬라이스는 합산 (폴드 플레이어의 소액 기여로 인한 인위적 분리 방지)
     """
     if folded_pids is None:
         folded_pids = set()
 
-    if not contributions:
-        return []
+    contrib = {pid: amt for pid, amt in contributions.items() if amt > 0}
+    if not contrib:
+        return [], {}
 
-    active = {pid: amt for pid, amt in contributions.items() if amt > 0}
-    if not active:
-        return []
+    levels = sorted(set(contrib.values()))
 
-    pots: list[PotSlice] = []
-    remaining = dict(active)
+    raw_pots: list[PotSlice] = []
+    uncalled: dict[str, int] = {}
+    prev_level = 0
 
-    while remaining:
-        min_contrib = min(remaining.values())
-        pot_amount  = min_contrib * len(remaining)
+    for level in levels:
+        # 이 레이어에 기여한 플레이어 (해당 금액 이상을 낸 모든 플레이어)
+        contributors = [pid for pid, amt in contrib.items() if amt >= level]
+        layer_amount = (level - prev_level) * len(contributors)
 
-        # 폴드한 플레이어는 칩을 넣었어도 수령 자격 없음
-        eligible = [pid for pid in remaining if pid not in folded_pids]
-        # 만약 살아있는 플레이어가 없으면(극단적 엣지케이스) 전체 허용
-        if not eligible:
-            eligible = list(remaining.keys())
+        if layer_amount <= 0:
+            prev_level = level
+            continue
 
-        pots.append(PotSlice(amount=pot_amount, eligible=eligible))
+        if len(contributors) == 1:
+            # 초과 금액을 경쟁할 상대가 없음 → Uncalled Bet 반환
+            pid = contributors[0]
+            uncalled[pid] = uncalled.get(pid, 0) + layer_amount
+        else:
+            # 2명 이상 기여 → 유효 팟 생성 (폴드 플레이어는 수령 자격 제외)
+            eligible = [pid for pid in contributors if pid not in folded_pids]
+            if not eligible:
+                eligible = list(contributors)  # 엣지 케이스: 기여자 전원 폴드
+            raw_pots.append(PotSlice(amount=layer_amount, eligible=eligible))
 
-        remaining = {pid: amt - min_contrib for pid, amt in remaining.items()}
-        remaining = {pid: amt for pid, amt in remaining.items() if amt > 0}
+        prev_level = level
 
-    # 폴드된 플레이어의 소액 기여가 동일 eligible 슬라이스를 두 개로 쪼갤 수 있음.
-    # eligible set이 같은 연속 슬라이스는 하나의 팟으로 합산.
+    # 인접한 동일 eligible 슬라이스 합산
+    # (폴드한 플레이어가 최저 all-in 보다 적게 기여한 경우 같은 eligible이 두 슬라이스로 분리됨)
     merged: list[PotSlice] = []
-    for s in pots:
+    for s in raw_pots:
         if merged and set(merged[-1].eligible) == set(s.eligible):
             prev = merged[-1]
             merged[-1] = PotSlice(amount=prev.amount + s.amount, eligible=prev.eligible)
         else:
             merged.append(s)
-    return merged
+
+    return merged, uncalled
 
 
 @dataclass

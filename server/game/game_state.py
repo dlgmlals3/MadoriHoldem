@@ -311,9 +311,12 @@ class GameState:
         total_contributions = {
             pid: self.seats[pid].total_contribution for pid in active
         }
-        # folded 플레이어 칩은 팟에 포함되지만 수령 자격 없음
-        pots = compute_pots(total_contributions,
-                            folded_pids=self.betting_round.folded)
+        # 레이어 방식 팟 계산 — uncalled bet은 해당 플레이어에게 즉시 반환
+        pots, uncalled = compute_pots(total_contributions,
+                                      folded_pids=self.betting_round.folded)
+        for pid, amt in uncalled.items():
+            if pid in self.seats:
+                self.seats[pid].stack += amt
 
         results: list[dict] = []
         for pid in still_in:
@@ -331,7 +334,7 @@ class GameState:
         # award each pot slice and build breakdown for client
         pot_labels = ["메인팟", "세컨팟", "서드팟", "팟4", "팟5"]
         pot_results: list[dict] = []
-        board_displays = {c.display for c in self.community_cards}
+        board_displays = {str(c) for c in self.community_cards}
 
         def _is_playing_board(best5: list[dict]) -> bool:
             return all(c["display"] in board_displays for c in best5)
@@ -417,21 +420,42 @@ class GameState:
         return 0
 
     def _live_pots(self, active: list[str]) -> list[dict]:
-        """현재 베팅 상황 기준으로 메인팟/사이드팟 분류."""
+        """스트리트 종료 후에만 메인팟/사이드팟 분리 표시.
+
+        poker-ts의 PotManager.collectBetsForm과 동일한 원칙:
+        스트리트 베팅이 진행 중(current_bets > 0)이면 단일 팟만 표시.
+        스트리트가 끝나 current_bets가 모두 0이 된 시점(새 라운드 시작)에
+        total_contribution 기준으로 메인팟/사이드팟을 분리 표시.
+        """
         if not self.betting_round:
             return []
-        contributions: dict[str, int] = {}
-        for pid in active:
-            prev = self.seats[pid].total_contribution
-            curr = self.betting_round.current_bets.get(pid, 0)
-            contributions[pid] = prev + curr
-        folded = self.betting_round.folded
+
+        # 현재 스트리트에서 베팅이 진행 중인지 확인
+        street_has_bets = any(
+            self.betting_round.current_bets.get(pid, 0) > 0 for pid in active
+        )
+
+        contributions: dict[str, int] = {
+            pid: self.seats[pid].total_contribution
+                 + self.betting_round.current_bets.get(pid, 0)
+            for pid in active
+        }
+        total = sum(contributions.values())
+        if total <= 0:
+            return []
+
+        # 베팅 진행 중 or 올인 없음 → 단일 팟 (사이드팟 미표시)
+        if street_has_bets or not self.betting_round.all_in:
+            return [{"label": "메인팟", "amount": total}]
+
+        # 스트리트 종료 후 새 라운드 시작 (current_bets=0, all_in 확정)
+        # → total_contribution 기준으로 메인팟/사이드팟 분리 표시
+        pots, _ = compute_pots(contributions, folded_pids=self.betting_round.folded)
         labels = ["메인팟", "세컨팟", "서드팟", "팟4", "팟5"]
-        slices = compute_pots(contributions, folded_pids=folded)
         return [
             {"label": labels[i] if i < len(labels) else f"팟{i+1}",
              "amount": s.amount}
-            for i, s in enumerate(slices)
+            for i, s in enumerate(pots)
         ]
 
     def _public_state(self, active: list[str]) -> dict:
