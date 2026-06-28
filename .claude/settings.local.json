@@ -7,7 +7,9 @@
       "PowerShell(pip install fastapi \"uvicorn[standard]\" websockets pytest 2>&1)",
       "PowerShell(python --version)",
       "PowerShell(python -m pip --version)",
-      "PowerShell(python -m pip install fastapi \"uvicorn[standard]\" websockets pytest 2>&1)"
+      "PowerShell(python -m pip install fastapi \"uvicorn[standard]\" websockets pytest 2>&1)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

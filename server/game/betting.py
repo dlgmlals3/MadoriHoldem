@@ -45,7 +45,16 @@ def compute_pots(
         remaining = {pid: amt - min_contrib for pid, amt in remaining.items()}
         remaining = {pid: amt for pid, amt in remaining.items() if amt > 0}
 
-    return pots
+    # 폴드된 플레이어의 소액 기여가 동일 eligible 슬라이스를 두 개로 쪼갤 수 있음.
+    # eligible set이 같은 연속 슬라이스는 하나의 팟으로 합산.
+    merged: list[PotSlice] = []
+    for s in pots:
+        if merged and set(merged[-1].eligible) == set(s.eligible):
+            prev = merged[-1]
+            merged[-1] = PotSlice(amount=prev.amount + s.amount, eligible=prev.eligible)
+        else:
+            merged.append(s)
+    return merged
 
 
 @dataclass

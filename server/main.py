@@ -4,10 +4,13 @@ import json
 import random
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from game.room_manager import RoomManager
 from game.game_state import Phase
@@ -15,6 +18,8 @@ from game.ai_strategy import decide_action
 
 room_manager = RoomManager()
 AI_TURN_TIMEOUT = 3.0
+BASE_DIR = Path(__file__).resolve().parent.parent
+CLIENT_DIR = BASE_DIR / "client"
 DEAL_DELAY     = 3.5   # 클라이언트 카드 딜 애니메이션 대기 (초)
 
 AI_NICK_POOL = ["Bot-강철", "Bot-여우", "Bot-독수리", "Bot-호랑이",
@@ -70,19 +75,28 @@ async def dispatch_events(room_id: str, events: list[dict]) -> None:
         else:
             await broadcast(room_id, ev)
 
+        if ev.get("event") == "reveal_all_cards":
+            await asyncio.sleep(2.0)   # 클라이언트가 홀카드를 보여줄 시간
+
         if ev.get("event") == "game_state":
             nxt = events[i + 1] if i + 1 < len(events) else None
             if nxt and nxt.get("event") in ("game_state", "showdown"):
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(1.8)
             elif has_deal and nxt and nxt.get("event") == "action_required":
                 # 카드 딜 애니메이션이 끝날 때까지 첫 action_required 지연
                 await asyncio.sleep(DEAL_DELAY)
 
     last_ev = events[-1].get("event") if events else None
 
-    # Hand ended -> schedule auto-start
+    # Hand ended -> schedule auto-start (delay synced with client banner duration)
     if last_ev in ("hand_end", "showdown"):
-        asyncio.create_task(_auto_start_next_hand(room_id))
+        if last_ev == "showdown":
+            showdown_ev = next((e for e in events if e.get("event") == "showdown"), {})
+            n_pots = max(1, len(showdown_ev.get("pot_results", [])))
+        else:
+            n_pots = 1
+        banner_done = (n_pots - 1) * 2.2 + 4.5
+        asyncio.create_task(_auto_start_next_hand(room_id, banner_done + 5.0))
         return
 
     # Action required -> if AI's turn, schedule AI action
@@ -116,8 +130,8 @@ async def _ai_act(room_id: str, player_id: str) -> None:
         print(f"[AI ERROR] {player_id}: {e}")
 
 
-async def _auto_start_next_hand(room_id: str) -> None:
-    await asyncio.sleep(5)
+async def _auto_start_next_hand(room_id: str, delay: float = 9.5) -> None:
+    await asyncio.sleep(delay)
     try:
         room = room_manager.get_room(room_id)
         if room is None:
@@ -198,6 +212,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root():
+    return RedirectResponse("/client/index.html")
+
+
+app.mount("/client", StaticFiles(directory=CLIENT_DIR), name="client")
 
 
 @app.get("/rooms")

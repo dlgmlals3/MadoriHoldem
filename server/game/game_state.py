@@ -135,13 +135,14 @@ class GameState:
             self.phase = Phase.WAITING
             return [{"event": "game_over", "reason": "not_enough_players"}]
 
-        for pid in active:
-            s = self.seats[pid]
-            s.hole_cards = []
-            s.is_folded = False
-            s.is_all_in = False
-            s.current_bet = 0
-            s.total_contribution = 0
+        for pid in self.seat_order:
+            if pid in self.seats:
+                s = self.seats[pid]
+                s.hole_cards = []
+                s.is_folded = False
+                s.is_all_in = False
+                s.current_bet = 0
+                s.total_contribution = 0
 
         # advance dealer button
         n = len(active)
@@ -245,7 +246,7 @@ class GameState:
         return events
 
     # ------------------------------------------------------------------ phase advance
-    def _advance_phase(self, active: list[str]) -> list[dict]:
+    def _advance_phase(self, active: list[str], _reveal_sent: bool = False) -> list[dict]:
         events: list[dict] = []
 
         # collect bets into pot
@@ -286,13 +287,18 @@ class GameState:
 
         # if only allin players remain, run out the board automatically
         if len(non_allin) <= 1:
+            # 첫 진입 시에만 모든 홀카드 공개 이벤트 발송
+            if not _reveal_sent:
+                all_cards = [
+                    {"player_id": pid,
+                     "cards": [c.to_dict() for c in self.seats[pid].hole_cards]}
+                    for pid in still_in
+                ]
+                events.append({"event": "reveal_all_cards", "players": all_cards})
             events.append({"event": "game_state", **self._public_state(active)})
-            events += self._advance_phase(active)
+            events += self._advance_phase(active, _reveal_sent=True)
             return events
 
-        # SB (or first active after dealer) acts first post-flop.
-        # Add 2 s to deadline to match the reveal delay in dispatch_events so
-        # the player gets the full turn_timeout from when the action bar appears.
         self.current_player_index = self._first_postflop_index(active, still_in)
         self.turn_deadline = time.time() + self.turn_timeout
         events.append({"event": "game_state", **self._public_state(active)})
@@ -322,8 +328,15 @@ class GameState:
                 "won": 0,
             })
 
-        # award each pot slice
-        for pot_slice in pots:
+        # award each pot slice and build breakdown for client
+        pot_labels = ["메인팟", "세컨팟", "서드팟", "팟4", "팟5"]
+        pot_results: list[dict] = []
+        board_displays = {c.display for c in self.community_cards}
+
+        def _is_playing_board(best5: list[dict]) -> bool:
+            return all(c["display"] in board_displays for c in best5)
+
+        for i, pot_slice in enumerate(pots):
             eligible_results = [r for r in results if r["player_id"] in pot_slice.eligible]
             if not eligible_results:
                 continue
@@ -333,15 +346,34 @@ class GameState:
             remainder = pot_slice.amount % len(winners)
             for r in winners:
                 r["won"] += share
-            # odd chip goes to first winner (left of dealer)
             if remainder:
                 winners[0]["won"] += remainder
+
+            chop_label = None
+            if len(winners) > 1:
+                chop_label = (
+                    "보드 찹"
+                    if all(_is_playing_board(r["best_hand"]) for r in winners)
+                    else "스플릿"
+                )
+
+            pot_results.append({
+                "label": pot_labels[i] if i < len(pot_labels) else f"팟{i+1}",
+                "amount": pot_slice.amount,
+                "chop_label": chop_label,
+                "winners": [
+                    {"player_id": r["player_id"], "nickname": r["nickname"],
+                     "hand_rank": r["hand_rank"], "share": share}
+                    for r in winners
+                ],
+            })
 
         for r in results:
             self.seats[r["player_id"]].stack += r["won"]
 
         self.phase = Phase.HAND_END
         return [{"event": "showdown", "results": results,
+                 "pot_results": pot_results,
                  "community_cards": [c.to_dict() for c in self.community_cards]}]
 
     # ------------------------------------------------------------------ helpers
@@ -384,10 +416,29 @@ class GameState:
                 return idx
         return 0
 
+    def _live_pots(self, active: list[str]) -> list[dict]:
+        """현재 베팅 상황 기준으로 메인팟/사이드팟 분류."""
+        if not self.betting_round:
+            return []
+        contributions: dict[str, int] = {}
+        for pid in active:
+            prev = self.seats[pid].total_contribution
+            curr = self.betting_round.current_bets.get(pid, 0)
+            contributions[pid] = prev + curr
+        folded = self.betting_round.folded
+        labels = ["메인팟", "세컨팟", "서드팟", "팟4", "팟5"]
+        slices = compute_pots(contributions, folded_pids=folded)
+        return [
+            {"label": labels[i] if i < len(labels) else f"팟{i+1}",
+             "amount": s.amount}
+            for i, s in enumerate(slices)
+        ]
+
     def _public_state(self, active: list[str]) -> dict:
         return {
             "phase": self.phase.value,
-            "pot": self.pot,   # 다음 스테이지 전환 시에만 누적 (현재 스트리트 베팅은 bet-zone에 표시)
+            "pot": self.pot,
+            "live_pots": self._live_pots(active),
             "community_cards": [c.to_dict() for c in self.community_cards],
             "current_player": active[self.current_player_index % len(active)] if active else None,
             "players": [self.seats[pid].to_public_dict() for pid in self.seat_order if pid in self.seats],

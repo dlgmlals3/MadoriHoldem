@@ -14,7 +14,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-x: hidden;   /* 가로 스크롤만 차단 — overflow:hidden 은 scaled 테이블 클리핑 유발 */
+  overflow: hidden;
   touch-action: none;   /* 모바일 스크롤 방지 (버튼/슬라이더는 개별 재정의) */
 }
 
@@ -77,6 +77,8 @@ body {
   display:flex; flex-direction:column; align-items:center;
   gap:4px;
   flex:1;
+  overflow:hidden;
+  min-height:0;
 }
 
 /* ── CHIP STACK ─────────────────────────── */
@@ -90,10 +92,10 @@ body {
 /* ── 9-SEAT TABLE ─────────────────────── */
 #table-scaler {
   position:relative;
+  flex:1;
   width:100%;
-  flex-shrink:0;
-  /* CSS 폴백: JS가 덮어씀 */
-  height:calc(100vw * 480 / 840);
+  min-height:0;
+  overflow:hidden;
 }
 #table-wrap {
   position:absolute;
@@ -143,6 +145,15 @@ body {
   background:rgba(0,0,0,0.45); border:1px solid rgba(232,201,110,0.2);
   border-radius:16px; padding:3px 12px; font-weight:600; letter-spacing:0.5px;
 }
+/* 멀티팟 표시 */
+.pot-row { display:flex; align-items:center; gap:4px; }
+.pot-row-chips { display:inline-flex; gap:2px; align-items:flex-end; min-height:16px; }
+.pot-row-label {
+  font-size:10px; color:#e8c96e;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(232,201,110,0.25);
+  border-radius:12px; padding:2px 8px; font-weight:600; white-space:nowrap;
+}
+.pot-row-label.side { color:#9fd0f0; border-color:rgba(159,208,240,0.3); }
 #table-overlay {
   display:none; position:absolute; left:50%; top:43%; transform:translate(-50%,-50%);
   width:600px; height:220px; border-radius:50%;
@@ -267,11 +278,17 @@ body {
   transform:translate(-50%,-50%);
   flex-direction:column;
   align-items:center; justify-content:center;
-  gap:4px;
+  gap:6px;
   z-index:200;
   pointer-events:none;
   text-align:center;
-  background:none; border:none;
+  background:rgba(0,0,0,0.52);
+  border:1px solid rgba(232,201,110,0.18);
+  border-radius:20px;
+  padding:22px 40px 20px;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  box-shadow:0 8px 40px rgba(0,0,0,0.7);
 }
 #rb-icon  { display:none; }
 #rb-who   {
@@ -340,19 +357,13 @@ body {
 #b-raise:hover { background:rgba(232,201,110,0.22); box-shadow:0 4px 14px rgba(232,201,110,0.22); }
 
 /* ── TIMER ───────────────────────────── */
-#timer-wrap { display:none; align-items:center; gap:8px; margin-bottom:6px; }
-#timer-bar-bg { flex:1; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
-#timer-bar    { height:100%; width:100%; background:#4ecca3; border-radius:3px; transition:width 0.5s linear,background 0.3s; }
+#timer-wrap { display:none; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:6px; }
+#timer-bar-bg { display:none; }
+#timer-bar    { display:none; }
 #timer-num    { font-size:15px; font-weight:800; color:#4ecca3; min-width:30px; text-align:right; font-variant-numeric:tabular-nums; }
 #timer-num.urgent { color:#e06060; }
 
-/* ── 가로(LANDSCAPE) 모드 — 테이블+액션바 좌우 배치 ── */
-@media (orientation:landscape){
-  #game { flex-direction:row; align-items:stretch; padding:4px 8px 6px; gap:8px; }
-  #table-scaler { flex:1; min-width:0; }
-  #action-bar { width:240px; flex-shrink:0; align-self:center; }
-  #result-banner { left:calc(50% - 120px); }
-}
+/* 액션바 항상 아래 — 세로 레이아웃 고정 */
 
 /* ── 카드 크기 계층 ───────────────────────── */
 /* 커뮤니티 카드: .card 기본 크기 64×92 사용                */
@@ -393,8 +404,34 @@ body {
 /* 좌상단 숫자/무늬만 표시 — 크게 */
 .card-tl { position:absolute; top:4px; left:5px; display:flex; flex-direction:column; align-items:flex-start; line-height:1; font-weight:900; z-index:2; }
 .card-tl .rnk { font-size:20px; }
-.card-tl .sut { font-size:14px; margin-top:1px; }
+.card-tl .sut { font-size:20px; margin-top:1px; line-height:1; }
 .card-cs { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:42px; line-height:1; }
+
+/* ── SEAT TIMER RING ───────────────────────── */
+.seat-ring {
+  display:none;
+  position:absolute;
+  inset:-4px;
+  border-radius:14px;
+  z-index:10;
+  pointer-events:none;
+  background:conic-gradient(from -90deg, #e8c96e var(--rp,360deg), rgba(255,255,255,0.12) 0);
+  padding:3px;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:destination-out;
+  mask-composite:exclude;
+}
+.seat-ring.urgent {
+  background:conic-gradient(from -90deg, #e06060 var(--rp,360deg), rgba(255,255,255,0.12) 0);
+}
+.seat-ring.active {
+  display:block;
+  filter:drop-shadow(0 0 4px rgba(232,201,110,0.75)) drop-shadow(0 0 2px rgba(232,201,110,0.5));
+}
+.seat-ring.urgent.active {
+  filter:drop-shadow(0 0 5px rgba(224,96,96,0.85)) drop-shadow(0 0 3px rgba(224,96,96,0.6));
+}
 .card-br { display:none; }
 .card.back {
   background:#a8001e;
@@ -466,7 +503,7 @@ body {
 <div id="modal">
   <div class="modal-box">
     <h1>♠ 마도리 홀덤 ♠</h1>
-    <div class="field"><label>서버 주소</label><input id="i-server" value="ws://localhost:8000/ws"></div>
+    <div class="field"><label>서버 주소</label><input id="i-server" value=""></div>
     <div class="field"><label>룸 ID</label><input id="i-room" value="ROOM1"></div>
     <div class="field"><label>플레이어 ID</label><input id="i-pid" placeholder="alice"></div>
     <div class="field"><label>닉네임 (방장: 마도리)</label><input id="i-nick" placeholder="마도리"></div>
@@ -504,6 +541,7 @@ body {
     <div class="seat" id="seat-0">
       <div class="seat-cards" id="sc-0"></div>
       <div class="seat-body" id="sb-0">
+        <div class="seat-ring" id="sring-0"></div>
         <div class="seat-roles" id="sr-0"></div>
         <div class="seat-nick" id="sn-0">나</div>
         <div class="seat-chips" id="schips-0">—</div>
@@ -515,6 +553,7 @@ body {
     <div class="seat" id="seat-1">
       <div class="seat-cards" id="sc-1"></div>
       <div class="seat-body empty" id="sb-1">
+        <div class="seat-ring" id="sring-1"></div>
         <div class="seat-roles" id="sr-1"></div>
         <div class="seat-nick" id="sn-1">빈 자리</div>
         <div class="seat-chips" id="schips-1"></div>
@@ -525,6 +564,7 @@ body {
     <div class="seat" id="seat-2">
       <div class="seat-cards" id="sc-2"></div>
       <div class="seat-body empty" id="sb-2">
+        <div class="seat-ring" id="sring-2"></div>
         <div class="seat-roles" id="sr-2"></div>
         <div class="seat-nick" id="sn-2">빈 자리</div>
         <div class="seat-chips" id="schips-2"></div>
@@ -535,6 +575,7 @@ body {
     <div class="seat" id="seat-3">
       <div class="seat-cards" id="sc-3"></div>
       <div class="seat-body empty" id="sb-3">
+        <div class="seat-ring" id="sring-3"></div>
         <div class="seat-roles" id="sr-3"></div>
         <div class="seat-nick" id="sn-3">빈 자리</div>
         <div class="seat-chips" id="schips-3"></div>
@@ -545,6 +586,7 @@ body {
     <div class="seat" id="seat-4">
       <div class="seat-cards" id="sc-4"></div>
       <div class="seat-body empty" id="sb-4">
+        <div class="seat-ring" id="sring-4"></div>
         <div class="seat-roles" id="sr-4"></div>
         <div class="seat-nick" id="sn-4">빈 자리</div>
         <div class="seat-chips" id="schips-4"></div>
@@ -555,6 +597,7 @@ body {
     <div class="seat" id="seat-5">
       <div class="seat-cards" id="sc-5"></div>
       <div class="seat-body empty" id="sb-5">
+        <div class="seat-ring" id="sring-5"></div>
         <div class="seat-roles" id="sr-5"></div>
         <div class="seat-nick" id="sn-5">빈 자리</div>
         <div class="seat-chips" id="schips-5"></div>
@@ -565,6 +608,7 @@ body {
     <div class="seat" id="seat-6">
       <div class="seat-cards" id="sc-6"></div>
       <div class="seat-body empty" id="sb-6">
+        <div class="seat-ring" id="sring-6"></div>
         <div class="seat-roles" id="sr-6"></div>
         <div class="seat-nick" id="sn-6">빈 자리</div>
         <div class="seat-chips" id="schips-6"></div>
@@ -575,6 +619,7 @@ body {
     <div class="seat" id="seat-7">
       <div class="seat-cards" id="sc-7"></div>
       <div class="seat-body empty" id="sb-7">
+        <div class="seat-ring" id="sring-7"></div>
         <div class="seat-roles" id="sr-7"></div>
         <div class="seat-nick" id="sn-7">빈 자리</div>
         <div class="seat-chips" id="schips-7"></div>
@@ -585,6 +630,7 @@ body {
     <div class="seat" id="seat-8">
       <div class="seat-cards" id="sc-8"></div>
       <div class="seat-body empty" id="sb-8">
+        <div class="seat-ring" id="sring-8"></div>
         <div class="seat-roles" id="sr-8"></div>
         <div class="seat-nick" id="sn-8">빈 자리</div>
         <div class="seat-chips" id="schips-8"></div>
@@ -656,24 +702,17 @@ function scaleTable(){
   const sc=document.getElementById('table-scaler');
   if(!tw||!sc)return;
 
-  const hdr=document.getElementById('header');
-  const ab =document.getElementById('action-bar');
-  const hdrH=hdr?hdr.offsetHeight:40;
-  const vh=window.innerHeight;
-  const landscape=window.matchMedia('(orientation:landscape)').matches;
+  const cw=sc.clientWidth||window.innerWidth;
+  const ch=sc.clientHeight;
+  if(!cw||!ch)return;
 
-  const availW=sc.clientWidth||window.innerWidth;
-  const scaleW=availW/840;
-  // 가로 모드: 액션바가 우측에 배치되므로 세로 공간 전체 사용 가능
-  const abH=(!landscape&&ab)?ab.offsetHeight:0;
-  const availH=vh-hdrH-abH-12;
-  const scaleH=Math.max(0.15,availH/480);
-  const scale=Math.min(scaleW,scaleH);
+  const scale=Math.min(cw/840, ch/480);
+  const offsetX=Math.max(0,(cw-840*scale)/2);
+  const offsetY=Math.max(0,(ch-480*scale)/2);
 
-  const offsetX=(availW-840*scale)/2;
   tw.style.transform=`scale(${scale})`;
-  tw.style.left=Math.max(0,offsetX)+'px';
-  sc.style.height=(480*scale)+'px';
+  tw.style.left=offsetX+'px';
+  tw.style.top=offsetY+'px';
 }
 window.addEventListener('resize',scaleTable);
 // orientationchange 후 브라우저가 치수를 확정하기까지 100ms 대기
@@ -747,36 +786,132 @@ function renderChips(container,amount,chipW=20,chipH=9,gapY=5){
 
 // ── Timer ───────────────────────────────────
 let timerInterval=null,timerDeadline=0,timerTotal=30;
+let timerRingVpos=-1;
+let ringAnimFrame=null;
+
+function _setRing(vpos,deg,urgent){
+  if(vpos<0||vpos>8)return;
+  const ring=id(`sring-${vpos}`);if(!ring)return;
+  ring.style.setProperty('--rp',`${deg}deg`);
+  ring.className='seat-ring active'+(urgent?' urgent':'');
+}
+function _clearAllRings(){
+  for(let i=0;i<9;i++){const r=id(`sring-${i}`);if(r)r.className='seat-ring';}
+  timerRingVpos=-1;
+}
+function _ringLoop(){
+  if(timerRingVpos<0||timerDeadline<=0)return;
+  const rem=timerDeadline-Date.now()/1000;
+  const pct=Math.max(0,Math.min(100,(rem/timerTotal)*100));
+  _setRing(timerRingVpos,pct*3.6,rem<=10);
+  if(rem>0){
+    ringAnimFrame=requestAnimationFrame(_ringLoop);
+  } else {
+    _clearAllRings();
+    if(currentTurnPid===myId)act('fold',0);
+  }
+}
 function startTimer(deadline){
-  stopTimer();timerDeadline=deadline;timerTotal=Math.max(1,deadline-Date.now()/1000);
+  stopTimer();
+  timerDeadline=deadline;timerTotal=Math.max(1,deadline-Date.now()/1000);
   id('timer-wrap').style.display='flex';
   const st=id('seat-timer');if(st)st.style.display='block';
-  tickTimer();timerInterval=setInterval(tickTimer,500);
-}
-function tickTimer(){
-  const rem=timerDeadline-Date.now()/1000,secs=Math.max(0,Math.ceil(rem)),pct=Math.max(0,Math.min(100,(rem/timerTotal)*100));
-  const n=id('timer-num');n.textContent=secs;n.className=secs<=10?'urgent':'';
-  const bar=id('timer-bar');bar.style.width=pct+'%';bar.style.background=secs<=10?'#e06060':'#4ecca3';
-  const st=id('seat-timer');
-  if(st){st.textContent=secs+'초';st.className=secs<=10?'urgent':'';}
-  if(rem<=0){clearInterval(timerInterval);timerInterval=null;act('fold',0);}
+  timerRingVpos=pidToVpos(currentTurnPid);
+  if(timerRingVpos>=0){
+    const ring=id(`sring-${timerRingVpos}`);
+    if(ring){ring.style.setProperty('--rp','360deg');ring.className='seat-ring active';}
+  }
+  // 텍스트 카운트다운 (0.5초 간격)
+  timerInterval=setInterval(()=>{
+    const rem=timerDeadline-Date.now()/1000,secs=Math.max(0,Math.ceil(rem));
+    const n=id('timer-num');if(n){n.textContent=secs;n.className=secs<=10?'urgent':'';}
+    const st=id('seat-timer');if(st){st.textContent=secs+'초';st.className=secs<=10?'urgent':'';}
+  },500);
+  // 링 부드럽게 갱신 (rAF)
+  ringAnimFrame=requestAnimationFrame(_ringLoop);
 }
 function stopTimer(){
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  if(ringAnimFrame){cancelAnimationFrame(ringAnimFrame);ringAnimFrame=null;}
   id('timer-wrap').style.display='none';
   const st=id('seat-timer');if(st)st.style.display='none';
+  _clearAllRings();
+  timerDeadline=0;
+}
+
+// ── Card reset ───────────────────────────────
+let cardResetTimer=null;
+function scheduleCardReset(){
+  clearTimeout(cardResetTimer);
+  cardResetTimer=setTimeout(()=>{
+    clearHighlights();
+    revealMap={};
+    for(let v=0;v<TOTAL_SEATS;v++){const c=id(`sc-${v}`);if(c){c.innerHTML='';c.dataset.sig='';}}
+    renderMyCards([]);
+    id('community').innerHTML='';
+    _lastCommSig='';_lastCommParts=['_','_','_','_','_'];
+  },2800);
+}
+
+// ── Pot box renderer ────────────────────────
+function renderPotBox(pb, livePots, pot, plist){
+  const streetBets=(plist||[]).reduce((s,p)=>s+(p.current_bet||0),0);
+  const totalPot=pot+streetBets;
+  if(totalPot<=0){pb.style.display='none';return;}
+  pb.style.display='flex';
+  // 사이드팟이 없거나 1개이면 기존 표시
+  if(!livePots||livePots.length<=1){
+    pb.innerHTML=`<div id="pot-chips"></div><span id="pot-text">POT  ${totalPot.toLocaleString()}</span>`;
+    renderChips(id('pot-chips'),totalPot,22,10,5);
+    return;
+  }
+  // 멀티팟: 각 팟 행 렌더링
+  pb.innerHTML=livePots.map((p,i)=>
+    `<div class="pot-row">
+      <div class="pot-row-chips" data-amt="${p.amount}"></div>
+      <span class="pot-row-label${i>0?' side':''}">${p.label}&nbsp;${p.amount.toLocaleString()}</span>
+     </div>`
+  ).join('');
+  pb.querySelectorAll('.pot-row-chips').forEach(el=>{
+    renderChips(el,parseInt(el.dataset.amt),16,7,3);
+  });
 }
 
 // ── Result banner ───────────────────────────
 let resultTimer=null;
-function showResult(winnerNick,handRank,chips,isMe){
+function showResult(winnerNick,handRank,chips,isMe,potLabel){
   clearTimeout(resultTimer);
   const b=id('result-banner');
-  id('rb-who').textContent=(winnerNick||'?');
-  id('rb-rank').textContent=handRank?`${handRank}로 승리`:'승리';
-  id('rb-chips').textContent=chips>0?`+${chips.toLocaleString()} 칩`:'';
+  const prefix=potLabel?`[${potLabel}] `:'';
+  if(isMe){
+    id('rb-icon').textContent='🏆';
+    id('rb-who').textContent=prefix+'내가 승리!';
+    id('rb-rank').textContent=handRank||'';
+    id('rb-chips').textContent=chips>0?`+${chips.toLocaleString()} 칩`:'';
+  } else {
+    id('rb-icon').textContent='😞';
+    id('rb-who').textContent=prefix+`${winnerNick||'?'} 승리`;
+    id('rb-rank').textContent=handRank||'';
+    id('rb-chips').textContent='';
+  }
   b.style.display='flex';
   resultTimer=setTimeout(()=>{b.style.display='none';},4500);
+}
+
+function showResultSequence(potResults,myId){
+  let idx=0;
+  let winSoundPlayed=false;
+  function next(){
+    if(idx>=potResults.length)return;
+    const pr=potResults[idx];
+    const w=pr.winners&&pr.winners[0];
+    const isMe=w?.player_id===myId;
+    if(isMe&&!winSoundPlayed){playWinSound();winSoundPlayed=true;}
+    showResult(w?.nickname||'?',w?.hand_rank||'',w?.share||0,isMe,pr.label);
+    idx++;
+    if(idx<potResults.length)resultTimer=setTimeout(next,2200);
+  }
+  next();
 }
 
 // ── Card highlight ───────────────────────────
@@ -792,8 +927,9 @@ function getKeyCards(bestHand,rankStr){
 }
 function highlightHand(bestHand,rankStr){
   clearHighlights();const keySet=new Set(getKeyCards(bestHand,rankStr));
+  // 승자 키카드만 glow — 내 카드 포함 비키카드는 dim 하지 않음
   document.querySelectorAll('.card[data-card]').forEach(el=>{
-    const cd=el.getAttribute('data-card');el.classList.add(keySet.has(cd)?'highlight':'dim');
+    if(keySet.has(el.getAttribute('data-card')))el.classList.add('highlight');
   });
 }
 function clearHighlights(){document.querySelectorAll('.card').forEach(el=>el.classList.remove('highlight','dim'));}
@@ -873,7 +1009,8 @@ function renderSeat(vpos,p){
   // Cards
   if(!isMe){
     cardsEl.classList.add('opp-cards');
-    const revealed=revealMap[p.player_id];
+    // 폴드한 플레이어는 revealMap에 데이터가 있어도 카드를 공개하지 않음
+    const revealed=!p.is_folded&&revealMap[p.player_id]||undefined;
     const hasCards=!p.is_folded&&p.hole_cards&&p.hole_cards.length>0;
     const newSig=revealed?JSON.stringify(revealed):(hasCards?`back${p.hole_cards.length}`:'');
     if(cardsEl.dataset.sig!==newSig){
@@ -915,7 +1052,7 @@ function mkMiniCard(cardObj){
 
 // ── Connect ──────────────────────────────────
 function connect(){
-  const server=id('i-server').value.trim();
+  const server=(id('i-server').value.trim()||defaultServerUrl());
   roomId=id('i-room').value.trim();
   myId=id('i-pid').value.trim();
   myNick=id('i-nick').value.trim();
@@ -926,6 +1063,17 @@ function connect(){
   ws.onclose=()=>dot(false);
   ws.onerror=()=>{};
 }
+
+function defaultServerUrl(){
+  if(location.protocol==='https:')return `wss://${location.host}/ws`;
+  if(location.protocol==='http:'&&location.port!=='8080')return `ws://${location.host}/ws`;
+  return 'ws://localhost:8000/ws';
+}
+
+window.addEventListener('load',()=>{
+  const input=id('i-server');
+  if(input&&!input.value.trim())input.value=defaultServerUrl();
+});
 
 function onOpen(){
   ws.send(JSON.stringify({
@@ -972,13 +1120,18 @@ function handle(ev){
   else if(e==='player_ready'){/* silent */}
 
   else if(e==='deal_hole_cards'){
+    clearTimeout(cardResetTimer);
     myCards=ev.cards;
     lastActions={};
     setMyLastAction('');
     revealMap={};clearHighlights();
-    renderMyCards([]);  // 애니메이션 완료 후 공개
+    for(let v=0;v<TOTAL_SEATS;v++){
+      const c=id(`sc-${v}`);
+      if(c){c.innerHTML='';c.dataset.sig='';}
+    }
+    renderMyCards([]);
     _lastCommSig='';_lastCommParts=['_','_','_','_','_'];
-    id('community').innerHTML=''; // 새 핸드 — 이전 커뮤니티 카드 제거
+    id('community').innerHTML='';
     pendingDeal=true;
   }
 
@@ -1005,27 +1158,62 @@ function handle(ev){
     showSeatAction(pid,ev.display_text||fmtAction(action,amt));
   }
 
+  else if(e==='reveal_all_cards'){
+    stopTimer();disableActions();
+    dealAnimating=false;pendingActionEv=null;
+    // 모든 플레이어 홀카드 공개
+    (ev.players||[]).forEach(r=>{
+      if(r.player_id!==myId && r.cards?.length){
+        revealMap[r.player_id]=r.cards;
+      }
+    });
+    renderAllSeats(Object.values(seatMap));
+    // 오버레이 표시
+    showOverlay('🃏 올인 쇼다운');
+    setTimeout(hideOverlay,1800);
+  }
+
   else if(e==='showdown'){
     stopTimer();disableActions();
     dealAnimating=false;pendingDeal=false;pendingActionEv=null;
     renderComm(ev.community_cards||[]);
     const res=ev.results||[];
-    // Reveal all cards at showdown
+    const potResults=ev.pot_results||[];
     res.forEach(r=>{
-      if(r.player_id!==myId && r.cards?.length){
-        revealMap[r.player_id]=r.cards;
-      }
+      if(r.player_id!==myId && r.cards?.length) revealMap[r.player_id]=r.cards;
     });
-    // Re-render seats to show revealed cards
     renderAllSeats(Object.values(seatMap));
+    // 사이드팟 시 팟박스 업데이트
+    if(potResults.length>1){
+      const pb=id('pot-box');
+      if(pb){
+        pb.style.display='flex';
+        pb.innerHTML=potResults.map((pr,i)=>
+          `<div class="pot-row">
+            <div class="pot-row-chips" data-amt="${pr.amount}"></div>
+            <span class="pot-row-label${i>0?' side':''}">${pr.label}&nbsp;${pr.amount.toLocaleString()}</span>
+           </div>`
+        ).join('');
+        pb.querySelectorAll('.pot-row-chips').forEach(el=>{
+          renderChips(el,parseInt(el.dataset.amt),16,7,3);
+        });
+      }
+    }
     const myRes=res.find(r=>r.player_id===myId);
     const isWin=(myRes?.won||0)>0;
-    const winner=res.find(r=>r.won>0);
-    if(isWin)playWinSound();
+    // 메인팟 수령자(최다 획득 칩) 기준으로 카드 하이라이트
+    const winner=res.reduce((best,r)=>r.won>(best?.won||0)?r:best,null);
     if(winner)highlightHand(winner.best_hand||[],winner.hand_rank||'');
-    const winNick=winner?.nickname||winner?.player_id||'?';
-    showResult(winNick,winner?.hand_rank||'',winner?.won||0,isWin);
+    // 사이드팟 유무에 따라 결과 표시 방식 분기
+    if(potResults.length>1){
+      showResultSequence(potResults,myId);
+    } else {
+      if(isWin)playWinSound();
+      const winNick=winner?.nickname||winner?.player_id||'?';
+      showResult(winNick,winner?.hand_rank||'',winner?.won||0,isWin);
+    }
     myCards=[];currentTurnPid=null;
+    scheduleCardReset();
   }
 
   else if(e==='hand_end'){
@@ -1034,8 +1222,9 @@ function handle(ev){
     const won=ev.winner,isMe=won===myId;
     if(isMe)playWinSound();
     const wNick=ev.winner_nickname||getPlayerNick(won)||won||'?';
-    showResult(wNick,'상대 폴드',ev.amount||0,isMe);
+    showResult(wNick,isMe?'상대 폴드':'내가 폴드',ev.amount||0,isMe);
     myCards=[];renderMyCards([]);currentTurnPid=null;
+    scheduleCardReset();
   }
 
   else if(e==='game_over'){
@@ -1092,14 +1281,8 @@ function applyState(ev){
   id('phase-label').textContent=PL(phase);
 
   const pb=id('pot-box');
-  // 누적 팟 + 현재 스트릿 베팅 합산 표시
-  const streetBets=(plist||[]).reduce((s,p)=>s+(p.current_bet||0),0);
-  const totalPot=pot+streetBets;
-  if(totalPot>0){
-    pb.style.display='flex';
-    renderChips(id('pot-chips'),totalPot,22,10,5);
-    id('pot-text').textContent=`POT  ${totalPot.toLocaleString()}`;
-  } else pb.style.display='none';
+  const livePots=ev.live_pots||[];
+  renderPotBox(pb, livePots, pot, plist);
 
   renderComm(comm);
 
@@ -1130,7 +1313,7 @@ function mkFaceArt(rank, isRed){
   const r=isRed?'#cc0022':'#111133', g='#D4AF37', s='#FFD9B0', h='#3D1800';
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('viewBox','0 0 44 62');
-  svg.style.cssText='position:absolute;left:0;top:20px;width:100%;height:calc(100% - 22px)';
+  svg.style.cssText='position:absolute;left:18px;top:20px;width:calc(100% - 18px);height:calc(100% - 22px)';
   const art={
     K:`<polygon points="5,17 9,6 16,12 22,4 28,12 35,6 39,17 39,20 5,20" fill="${g}" stroke="#9A7000" stroke-width="0.5"/>
        <circle cx="22" cy="6" r="2.5" fill="#FF2233"/>
@@ -1184,10 +1367,11 @@ function mkCard(card,back){
   const isRed=suit==='♥'||suit==='♦';
   el.classList.add(isRed?'red':'black');
   const tl=document.createElement('div');tl.className='card-tl';
-  tl.innerHTML=`<span class="rnk">${rank}</span><span class="sut">${suit}</span>`;
   if(FACE_RANKS.has(rank)){
+    tl.innerHTML=`<span class="rnk">${rank}</span><span class="sut">${suit}</span>`;
     el.append(tl,mkFaceArt(rank,isRed));
   } else {
+    tl.innerHTML=`<span class="rnk">${rank}</span>`;
     const cs=document.createElement('div');cs.className='card-cs';cs.textContent=suit;
     el.append(tl,cs);
   }
@@ -1226,7 +1410,19 @@ function processActionRequired(ev){
   currentTurnPid=ev.player_id;
   renderAllSeats(Object.values(seatMap));
   if(ev.player_id===myId){enableActions();startTimer(ev.deadline);}
-  else{stopTimer();disableActions();}
+  else{
+    stopTimer();disableActions();
+    // AI 턴에도 링 표시 (rAF)
+    const vp=pidToVpos(ev.player_id);
+    if(vp>=0&&ev.deadline){
+      timerRingVpos=vp;
+      timerTotal=Math.max(1,ev.deadline-Date.now()/1000);
+      timerDeadline=ev.deadline;
+      const ring=id(`sring-${vp}`);
+      if(ring){ring.style.setProperty('--rp','360deg');ring.className='seat-ring active';}
+      ringAnimFrame=requestAnimationFrame(_ringLoop);
+    }
+  }
 }
 
 function buildDealOrder(players){
@@ -1249,12 +1445,14 @@ function showMyCardsWithFlip(cards){
 }
 
 function startDealAnimation(players){
-  if(!players.length){dealAnimating=false;return;}
+  // OUT 플레이어(칩 0)는 카드를 받지 않으므로 딜 애니메이션에서 제외
+  const activePlayers=players.filter(p=>p.stack>0||p.is_all_in);
+  if(!activePlayers.length){dealAnimating=false;return;}
   dealAnimating=true;
   // 상대 좌석 카드 초기화 (애니메이션으로 순차 표시)
   const seatDealCount={};
   for(let v=1;v<TOTAL_SEATS;v++){const c=id(`sc-${v}`);if(c)c.innerHTML='';}
-  const order=buildDealOrder(players);
+  const order=buildDealOrder(activePlayers);
   const seq=[...order,...order];
   let idx=0;
   function next(){
@@ -1305,8 +1503,9 @@ function enableActions(){
   rs.style.display='none';id('preset-row').style.display='none';
   if(va.check){
     bc.style.display='block';bc.textContent='CHECK';bc.onclick=()=>act('check',0);
-    if(va.raise){
-      rs.style.display='block';br.textContent='BET';br.style.display='block';
+    if(va.raise||va.allin){
+      rs.style.display='block';
+      br.textContent=va.raise?'BET':'ALL-IN';br.style.display='block';
       id('preset-row').style.display='flex';
     }
   } else {
@@ -1315,7 +1514,10 @@ function enableActions(){
       bc.textContent=`CALL  ${(va.call_amount||0).toLocaleString()}`;
       bc.onclick=()=>act('call',0);
     }
-    if(va.raise){rs.style.display='block';br.textContent='RAISE';br.style.display='block';}
+    if(va.raise||va.allin){
+      rs.style.display='block';
+      br.textContent=va.raise?'RAISE':'ALL-IN';br.style.display='block';
+    }
   }
   updateSliderRange();
   requestAnimationFrame(scaleTable);
@@ -1323,8 +1525,10 @@ function enableActions(){
 function disableActions(){id('action-bar').classList.add('off');id('preset-row').style.display='none';}
 function updateSliderRange(){
   const sl=id('raise-slider');
-  const min=va.raise?(va.min_raise||0):0;
-  const max=va.allin?(va.allin_amount||myStack):myStack;
+  const allinAmt=va.allin_amount||myStack;
+  // raise 불가능(all-in만 가능)하면 슬라이더를 올인 금액에 고정
+  const min=va.raise?(va.min_raise||0):allinAmt;
+  const max=va.allin?allinAmt:myStack;
   sl.min=min;sl.max=max;sl.step=1;sl.value=min;onSlide(min);
 }
 function onSlide(v){
