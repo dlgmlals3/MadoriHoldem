@@ -97,19 +97,21 @@ body {
   min-height:0;
   overflow:hidden;
 }
+
 #table-wrap {
   position:absolute;
   top:0; left:0;
-  width:var(--table-w, 390px); height:620px;
+  width:var(--table-w, 590px); height:600px;
   transform-origin:top left;
 }
+
 #table-bg {
   position:absolute;
   left:50%; top:49%;
   transform:translate(-50%,-50%);
-  width:54%; height:380px;
+  width:90%; height:90%;
   background:radial-gradient(ellipse at 50% 38%, #1b2d50 0%, #0f1d38 55%, #070e1e 100%);
-  border-radius:58px;
+  border-radius:150px;
   border:16px solid #0a0612;
   box-shadow:
     0 0 0 4px #1a0f2e,
@@ -140,9 +142,14 @@ body {
   z-index:4;
 }
 #pot-box.multi {
-  left:23%; top:32%;
-  transform:none;
-  align-items:flex-start;
+  left:50%; top:29%;
+  transform:translateX(-50%);
+  flex-direction:row;
+  align-items:flex-end;
+  justify-content:center;
+  gap:8px;
+  width:max-content;
+  max-width:82%;
 }
 #pot-chips { display:inline-flex; gap:3px; align-items:flex-end; min-height:20px; }
 #pot-text {
@@ -151,7 +158,7 @@ body {
   border-radius:16px; padding:3px 12px; font-weight:600; letter-spacing:0.5px;
 }
 /* 멀티팟 표시 */
-.pot-row { display:flex; align-items:center; gap:4px; }
+.pot-row { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .pot-row-chips { display:inline-flex; gap:2px; align-items:flex-end; min-height:16px; }
 .pot-row-label {
   font-size:12px; color:#e8c96e;
@@ -169,20 +176,20 @@ body {
 /* ── SEAT BADGES ─────────────────────── */
 .seat {
   position:absolute;
-  width:112px;
+  width:90px;
   transform:translate(-50%,-50%);
-  display:flex; flex-direction:column; align-items:center; gap:4px;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
 }
 /* Visual positions: my seat (0) at bottom-center, clockwise */
-/* seat-0(me) */ #seat-0 { left:50%;  top:92%; }
-/* seat-1(BL) */ #seat-1 { left:19%;  top:84%; }
-/* seat-2(L)  */ #seat-2 { left:10%;  top:62%; }
-/* seat-3(TL) */ #seat-3 { left:12%;  top:36%; }
-/* seat-4(TC) */ #seat-4 { left:25%;  top:10%; }
-/* seat-5(TC) */ #seat-5 { left:75%;  top:10%; }
-/* seat-6(TR) */ #seat-6 { left:88%;  top:36%; }
-/* seat-7(R)  */ #seat-7 { left:90%;  top:62%; }
-/* seat-8(BR) */ #seat-8 { left:81%;  top:84%; }
+/* seat-0(me) */ #seat-0 { left:50%;  top:94%; }
+/* seat-1(BL) */ #seat-1 { left:16%;  top:87%; }
+/* seat-2(L)  */ #seat-2 { left:5%;   top:64%; }
+/* seat-3(TL) */ #seat-3 { left:6%;   top:35%; }
+/* seat-4(TC) */ #seat-4 { left:25%;  top:7%;  }
+/* seat-5(TC) */ #seat-5 { left:75%;  top:7%;  }
+/* seat-6(TR) */ #seat-6 { left:94%;  top:35%; }
+/* seat-7(R)  */ #seat-7 { left:95%;  top:64%; }
+/* seat-8(BR) */ #seat-8 { left:84%;  top:87%; }
 
 .seat-cards {
   display:flex; gap:3px; justify-content:center;
@@ -204,8 +211,8 @@ body {
 .seat-body {
   background:rgba(255,255,255,0.05);
   border:1px solid rgba(255,255,255,0.1);
-  border-radius:10px;
-  padding:7px 8px 20px;
+  border-radius:8px;
+  padding:4px 6px;
   text-align:center;
   width:100%;
   position:relative;
@@ -222,12 +229,11 @@ body {
 }
 .seat-body.folded { opacity:0.4; }
 .seat-body.out { opacity:0.2; border-style:dashed; }
-.seat-nick { font-size:14px; font-weight:800; color:#dde; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.seat-chips { font-size:13px; color:#4ecca3; font-weight:700; }
-.seat-roles {
-  position:absolute; bottom:2px; right:4px;
-  display:flex; gap:2px; flex-wrap:wrap; justify-content:flex-end;
-}
+.seat-nick { font-size:12px; font-weight:800; color:#dde; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; }
+.seat-chips { font-size:11px; color:#4ecca3; font-weight:700; line-height:1.2; }
+.seat:not(#seat-0) .seat-nick { line-height:1.05; }
+.seat:not(#seat-0) .seat-chips { line-height:1.05; margin-top:-1px; }
+.seat-roles { display:none; }
 .role-badge {
   font-size:10px; font-weight:800; border-radius:4px;
   padding:2px 5px; letter-spacing:0.2px;
@@ -265,49 +271,41 @@ body {
   background:rgba(78,204,163,0.05);
 }
 #seat-0 .seat-nick { color:#4ecca3; font-size:15px; }
-.seat-last-action {
-  min-height:17px;
-  font-size:12px;
-  line-height:1;
-  font-weight:800;
-  color:#e8c96e;
-  text-shadow:0 0 7px rgba(232,201,110,0.35);
-  white-space:nowrap;
-}
+.seat-last-action { display:none; }
 
 /* ── RESULT BANNER — 투명 텍스트 오버레이 ── */
 #result-banner {
   display:none;
-  position:fixed;
-  top:50%; left:50%;
-  transform:translate(-50%,-50%);
+  position:absolute;
+  top:5%; left:50%;
+  transform:translateX(-50%);
   flex-direction:column;
   align-items:center; justify-content:center;
-  gap:6px;
-  z-index:200;
+  gap:3px;
+  z-index:80;
   pointer-events:none;
   text-align:center;
   background:rgba(0,0,0,0.52);
   border:1px solid rgba(232,201,110,0.18);
-  border-radius:20px;
-  padding:22px 40px 20px;
+  border-radius:14px;
+  padding:10px 24px 9px;
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
   box-shadow:0 8px 40px rgba(0,0,0,0.7);
 }
 #rb-icon  { display:none; }
 #rb-who   {
-  font-size:30px; font-weight:900; letter-spacing:1px;
+  font-size:20px; font-weight:900; letter-spacing:1px;
   color:#e8c96e;
   text-shadow:0 0 20px rgba(232,201,110,0.8), 0 2px 8px rgba(0,0,0,1), 0 2px 24px rgba(0,0,0,0.9);
 }
 #rb-rank  {
-  font-size:18px; font-weight:700;
+  font-size:13px; font-weight:700;
   color:#fff;
   text-shadow:0 2px 8px rgba(0,0,0,1), 0 0 16px rgba(0,0,0,0.9);
 }
 #rb-chips {
-  font-size:22px; font-weight:800;
+  font-size:16px; font-weight:800;
   color:#4ecca3;
   text-shadow:0 0 16px rgba(78,204,163,0.7), 0 2px 8px rgba(0,0,0,1);
 }
@@ -318,38 +316,38 @@ body {
 /* ── ACTION BAR ──────────────────────── */
 #action-bar {
   width:calc(100% - 12px);
-  background:rgba(255,255,255,0.035);
-  border:1px solid rgba(255,255,255,0.07);
-  border-radius:14px; padding:10px 10px;
+  background:transparent;
+  border:none;
+  border-radius:0; padding:0 8px 4px;
   transition:opacity 0.2s;
 }
 #action-bar.off { opacity:0.3; pointer-events:none; }
-#raise-section { margin-bottom:10px; }
-.raise-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
-.raise-label  { font-size:13px; color:#778; text-transform:uppercase; letter-spacing:0.5px; }
-#raise-val    { font-size:20px; font-weight:800; color:#e8c96e; }
-.slider-track { position:relative; height:38px; display:flex; align-items:center; }
+#raise-section { margin-bottom:5px; }
+.raise-header { display:none; }
+.raise-label  { font-size:11px; color:#778; text-transform:uppercase; letter-spacing:0.5px; }
+#raise-val    { min-width:88px; text-align:right; font-size:16px; font-weight:800; color:#e8c96e; white-space:nowrap; }
+.slider-track { position:relative; height:28px; display:flex; align-items:center; gap:10px; }
 #raise-slider {
-  -webkit-appearance:none; width:100%; height:9px;
+  -webkit-appearance:none; flex:1; min-width:0; height:7px;
   border-radius:5px; background:#1a1d2e; outline:none; cursor:pointer;
 }
 #raise-slider::-webkit-slider-thumb {
-  -webkit-appearance:none; width:32px; height:32px; border-radius:50%;
+  -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
   background:radial-gradient(circle at 40% 35%,#f5e07a,#c9a030);
   cursor:pointer; border:2px solid rgba(255,255,255,0.6);
   box-shadow:0 2px 8px rgba(200,160,40,0.6);
 }
-#preset-row { display:none; gap:6px; margin-top:8px; flex-wrap:wrap; }
+#preset-row { display:none; gap:4px; margin-top:5px; flex-wrap:wrap; }
 .preset {
   background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-  border-radius:7px; color:#aab; font-size:13px; padding:7px 10px;
+  border-radius:6px; color:#aab; font-size:11px; padding:4px 7px;
   cursor:pointer; transition:all 0.15s;
 }
 .preset:hover { background:rgba(232,201,110,0.12); border-color:rgba(232,201,110,0.35); color:#e8c96e; }
-#btns { display:flex; gap:8px; }
+#btns { display:flex; gap:6px; }
 .btn {
-  flex:1; min-height:52px; padding:13px 6px; border:none; border-radius:10px;
-  font-size:17px; font-weight:800; cursor:pointer; letter-spacing:0;
+  flex:1; min-height:34px; padding:6px 4px; border:none; border-radius:8px;
+  font-size:14px; font-weight:800; cursor:pointer; letter-spacing:0;
   transition:all 0.15s; touch-action:manipulation; /* body:none 재정의 */
 }
 .preset { touch-action:manipulation; }
@@ -488,7 +486,7 @@ body {
 /* ── BET ZONES ON TABLE FELT ─────────────── */
 .bet-zone {
   position:absolute; transform:translate(-50%,-50%);
-  display:none; flex-direction:row; align-items:center; gap:5px;
+  display:none; flex-direction:column; align-items:center; gap:2px;
   z-index:4; pointer-events:none;
 }
 .bet-zone-chips { display:inline-flex; gap:2px; align-items:flex-end; min-height:12px; }
@@ -496,16 +494,23 @@ body {
   font-size:12px; color:#e8c96e; font-weight:800;
   background:rgba(0,0,0,0.7); border-radius:5px; padding:2px 6px; white-space:nowrap;
 }
-.bet-zone-action {
-  display:none;
-  font-size:12px; color:#4ecca3; font-weight:900;
-  background:rgba(0,0,0,0.72); border:1px solid rgba(78,204,163,0.35);
-  border-radius:5px; padding:2px 7px; white-space:nowrap;
-}
+.bet-zone-action { display:none !important; }
 /* 베팅존 위치 (각 좌석과 테이블 중앙 사이) */
-#bz-0{left:50%; top:76%;}  #bz-1{left:31%; top:71%;}  #bz-2{left:27%; top:58%;}
-#bz-3{left:28%; top:41%;}  #bz-4{left:35%; top:26%;}  #bz-5{left:65%; top:26%;}
-#bz-6{left:72%; top:41%;}  #bz-7{left:73%; top:58%;}  #bz-8{left:69%; top:71%;}
+#bz-0{left:50%; top:77%;}  #bz-1{left:21%; top:82%;}  #bz-2{left:11%; top:63%;}
+#bz-3{left:12%; top:38%;}  #bz-4{left:29%; top:14%;}  #bz-5{left:71%; top:14%;}
+#bz-6{left:88%; top:38%;}  #bz-7{left:89%; top:63%;}  #bz-8{left:79%; top:82%;}
+.moving-chip-stack {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  z-index:90;
+  pointer-events:none;
+  transition:left 0.55s cubic-bezier(.22,.9,.22,1), top 0.55s cubic-bezier(.22,.9,.22,1), opacity 0.2s ease 0.42s, transform 0.55s cubic-bezier(.22,.9,.22,1);
+}
+.moving-chip-stack .bet-zone-amt { font-size:11px; }
+.moving-chip-stack.win {
+  transition:left 0.8s cubic-bezier(.18,.9,.2,1), top 0.8s cubic-bezier(.18,.9,.2,1), opacity 0.18s ease 0.68s, transform 0.8s cubic-bezier(.18,.9,.2,1);
+}
 </style>
 </head>
 <body>
@@ -653,6 +658,12 @@ body {
       🎰
       <img src="dealer.jpg" alt="" onerror="this.style.display='none'">
     </div>
+    <div id="result-banner">
+      <span id="rb-icon">🏆</span>
+      <span id="rb-who">나 승리!</span>
+      <span id="rb-rank"></span>
+      <span id="rb-chips"></span>
+    </div>
     <!-- 테이블 펠트 위 베팅존 (vpos 0~8) -->
     <div class="bet-zone" id="bz-0"><div class="bet-zone-chips" id="bzc-0"></div><div class="bet-zone-amt" id="bza-0"></div></div>
     <div class="bet-zone" id="bz-1"><div class="bet-zone-chips" id="bzc-1"></div><div class="bet-zone-amt" id="bza-1"></div></div>
@@ -666,14 +677,6 @@ body {
   </div><!-- #table-wrap -->
   </div><!-- #table-scaler -->
 
-  <!-- Result banner (inline, no dark overlay) -->
-  <div id="result-banner">
-    <span id="rb-icon">🏆</span>
-    <span id="rb-who">나 승리!</span>
-    <span id="rb-rank"></span>
-    <span id="rb-chips"></span>
-  </div>
-
   <!-- Action bar -->
   <div id="action-bar" class="off">
     <div id="timer-wrap">
@@ -683,11 +686,11 @@ body {
     <div id="raise-section">
       <div class="raise-header">
         <span class="raise-label">레이즈 / 벳</span>
-        <span id="raise-val">—</span>
       </div>
       <div class="slider-track">
         <input type="range" id="raise-slider" min="0" max="100000" step="1" value="0"
                oninput="onSlide(this.value)">
+        <span id="raise-val">—</span>
       </div>
       <div id="preset-row">
         <button class="preset" onclick="doPreset(0.33)">1/3 팟</button>
@@ -723,11 +726,12 @@ function scaleTable(){
   const scale=Math.min(cw/tableW, ch/tableH);
   const offsetX=Math.max(0,(cw-tableW*scale)/2);
   const offsetY=Math.max(0,(ch-tableH*scale)/2);
+  const tableDrop=14;
 
   tw.style.setProperty('--table-w',tableW+'px');
   tw.style.transform=`scale(${scale})`;
   tw.style.left=offsetX+'px';
-  tw.style.top=offsetY+'px';
+  tw.style.top=(offsetY+tableDrop)+'px';
 }
 window.addEventListener('resize',scaleTable);
 // orientationchange 후 브라우저가 치수를 확정하기까지 100ms 대기
@@ -747,12 +751,18 @@ let lastActions={};
 let betActionLabels={};
 let bettingPhase='';
 let streetRaiseCount=0;
+let displayedPotAmount=0;
+let potCollecting=false;
+let lastBetSnapshot=[];
 let communityRevealGateUntil=0;
 let deferredCommunityCards=null;
 let communityRevealGateTimer=null;
 const TOTAL_SEATS=9;
 // 딜 애니메이션 상태
 let dealAnimating=false, pendingDeal=false, pendingActionEv=null;
+
+// ── Util ────────────────────────────────────
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 // ── Audio ───────────────────────────────────
 let _audioCtx=null;
@@ -803,6 +813,139 @@ function renderChips(container,amount,chipW=20,chipH=9,gapY=5){
     }
     container.appendChild(col);
   });
+}
+
+function _centerInTable(el){
+  const tw=id('table-wrap'),r=el?.getBoundingClientRect(),tr=tw?.getBoundingClientRect();
+  if(!tw||!r||!tr)return null;
+  return {x:r.left+r.width/2-tr.left,y:r.top+r.height/2-tr.top};
+}
+function _makeMovingChip(amount,x,y,cls=''){
+  const tw=id('table-wrap');
+  if(!tw)return null;
+  const el=document.createElement('div');
+  el.className='moving-chip-stack'+(cls?' '+cls:'');
+  el.style.left=x+'px';el.style.top=y+'px';
+  const chips=document.createElement('div');
+  chips.className='bet-zone-chips';
+  const amt=document.createElement('div');
+  amt.className='bet-zone-amt';
+  amt.textContent=(amount||0).toLocaleString();
+  el.append(chips,amt);
+  renderChips(chips,amount,14,7,4);
+  tw.appendChild(el);
+  return el;
+}
+function _potCenter(){
+  const pb=id('pot-box');
+  if(pb&&pb.style.display!=='none'){
+    const p=_centerInTable(pb);
+    if(p)return p;
+  }
+  return {x:(id('table-wrap')?.clientWidth||590)*0.5,y:600*0.29};
+}
+function renderDisplayedPot(livePots=[]){
+  renderPotBox(id('pot-box'),livePots,displayedPotAmount,[]);
+}
+function animateBetsToPot(prevBets,finalPot,livePots=[]){
+  const sources=(prevBets||[]).filter(b=>b.amount>0);
+  if(!sources.length){
+    displayedPotAmount=finalPot||0;
+    renderDisplayedPot(livePots);
+    return Promise.resolve();
+  }
+  potCollecting=true;
+  const dst=_potCenter();
+  const movers=[];
+  sources.forEach(b=>{
+    const srcEl=id(`bz-${b.vpos}`);
+    const src=_centerInTable(srcEl);
+    if(!src)return;
+    if(srcEl) srcEl.style.visibility='hidden'; // 베팅존 즉시 숨김
+    const m=_makeMovingChip(b.amount,src.x,src.y);
+    if(m)movers.push(m);
+  });
+  if(!movers.length){
+    potCollecting=false;
+    displayedPotAmount=finalPot||0;
+    renderDisplayedPot(livePots);
+    return Promise.resolve();
+  }
+  playChipSound();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    movers.forEach((m,i)=>{
+      m.style.left=(dst.x+(i-(movers.length-1)/2)*4)+'px';
+      m.style.top=dst.y+'px';
+      m.style.transform='translate(-50%,-50%) scale(0.85)';
+      m.style.opacity='0';
+    });
+  }));
+  return new Promise(resolve=>setTimeout(()=>{
+    movers.forEach(m=>m.remove());
+    // 베팅존 visibility 복구 (renderAllSeats가 display를 결정)
+    sources.forEach(b=>{const el=id(`bz-${b.vpos}`);if(el)el.style.visibility='';});
+    displayedPotAmount=finalPot||0;
+    renderDisplayedPot(livePots);
+    lastBetSnapshot=lastBetSnapshot.map(b=>({...b,amount:0}));
+    potCollecting=false;
+    resolve();
+  },620));
+}
+function animatePotToWinner(winnerPid,amount){
+  const pb=id('pot-box'),vp=pidToVpos(winnerPid),seat=vp>=0?id(`seat-${vp}`):null;
+  const src=_centerInTable(pb),dst=_centerInTable(seat);
+  if(!amount||!src||!dst){
+    if(pb)pb.style.display='none';
+    displayedPotAmount=0;
+    return Promise.resolve();
+  }
+  if(pb)pb.style.display='none';
+  const m=_makeMovingChip(amount,src.x,src.y,'win');
+  if(!m)return Promise.resolve();
+  playChipSound();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    m.style.left=dst.x+'px';
+    m.style.top=dst.y+'px';
+    m.style.transform='translate(-50%,-50%) scale(0.82)';
+    m.style.opacity='0';
+  }));
+  return new Promise(resolve=>setTimeout(()=>{
+    m.remove();
+    displayedPotAmount=0;
+    renderDisplayedPot([]);
+    resolve();
+  },880));
+}
+function animatePotResultToWinner(potResult,index){
+  const winner=(potResult?.winners||[])[0];
+  const amount=potResult?.amount||winner?.share||0;
+  const vp=pidToVpos(winner?.player_id);
+  const seat=vp>=0?id(`seat-${vp}`):null;
+  const rows=document.querySelectorAll('#pot-box .pot-row');
+  const srcEl=rows[index]||id('pot-box');
+  const src=_centerInTable(srcEl),dst=_centerInTable(seat);
+  if(!winner||!amount||!src||!dst)return Promise.resolve();
+
+  // 소스 즉시 숨김 — 칩이 "떠나는" 것처럼 보이도록
+  if(rows[index]) rows[index].style.visibility='hidden';
+  else            srcEl.style.display='none';
+
+  const m=_makeMovingChip(amount,src.x,src.y,'win');
+  if(!m)return Promise.resolve();
+  playChipSound();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    m.style.left=dst.x+'px';
+    m.style.top=dst.y+'px';
+    m.style.transform='translate(-50%,-50%) scale(0.82)';
+    m.style.opacity='0';
+  }));
+  return new Promise(resolve=>setTimeout(()=>{
+    m.remove();
+    if(rows[index])rows[index].remove();
+    displayedPotAmount=Math.max(0,displayedPotAmount-amount);
+    if(!id('pot-box')?.querySelector('.pot-row')&&displayedPotAmount<=0)renderDisplayedPot([]);
+    resolve();
+  },900));
 }
 
 // ── Timer ───────────────────────────────────
@@ -876,8 +1019,8 @@ function scheduleCardReset(delayMs=6500){
 
 // ── Pot box renderer ────────────────────────
 function renderPotBox(pb, livePots, pot, plist){
-  const streetBets=(plist||[]).reduce((s,p)=>s+(p.current_bet||0),0);
-  const totalPot=pot+streetBets;
+  const totalPot=pot||0;
+  if(!pb)return;
   if(totalPot<=0){pb.classList.remove('multi');pb.style.display='none';return;}
   pb.style.display='flex';
   // 사이드팟이 없거나 1개이면 기존 표시
@@ -968,14 +1111,14 @@ function pidToVpos(pid){
 }
 
 
-function renderAllSeats(players){
+function renderAllSeats(players, skipBetZones=false){
   seatMap={};
   (players||[]).forEach(p=>{ seatMap[p.seat_index]=p; });
   for(let vpos=0;vpos<TOTAL_SEATS;vpos++){
     const serverIdx=(vpos+mySeatIndex)%TOTAL_SEATS;
     const p=seatMap[serverIdx]||null;
     renderSeat(vpos,p);
-    updateBetZone(vpos,p);
+    if(!skipBetZones) updateBetZone(vpos,p);
   }
 }
 
@@ -1167,6 +1310,9 @@ function handle(ev){
     betActionLabels={};
     bettingPhase='';
     streetRaiseCount=0;
+    displayedPotAmount=0;
+    potCollecting=false;
+    lastBetSnapshot=[];
     setMyLastAction('');
     revealMap={};clearHighlights();
     for(let v=0;v<TOTAL_SEATS;v++){
@@ -1176,6 +1322,7 @@ function handle(ev){
     renderMyCards([]);
     _lastCommSig='';_lastCommParts=['_','_','_','_','_'];
     id('community').innerHTML='';
+    renderDisplayedPot([]);
     pendingDeal=true;
   }
 
@@ -1206,17 +1353,26 @@ function handle(ev){
   else if(e==='reveal_all_cards'){
     stopTimer();disableActions();
     dealAnimating=false;pendingActionEv=null;
-    startCommunityRevealGate(2500);
-    // 모든 플레이어 홀카드 공개
-    (ev.players||[]).forEach(r=>{
-      if(r.player_id!==myId && r.cards?.length){
-        revealMap[r.player_id]=r.cards;
+    (async()=>{
+      // 1. 베팅존 칩 → 중앙 팟으로 수거
+      const remainingBets=lastBetSnapshot.reduce((s,b)=>s+(b.amount||0),0);
+      if(remainingBets>0){
+        await animateBetsToPot(lastBetSnapshot,displayedPotAmount+remainingBets,[]);
       }
-    });
-    renderAllSeats(Object.values(seatMap));
-    // 오버레이 표시
-    showOverlay('🃏 올인 쇼다운');
-    setTimeout(hideOverlay,1800);
+      await sleep(1000);
+
+      // 2. 모든 플레이어 홀카드 공개 (bet zone 재렌더 금지)
+      (ev.players||[]).forEach(r=>{
+        if(r.player_id!==myId && r.cards?.length) revealMap[r.player_id]=r.cards;
+      });
+      // seatMap의 current_bet을 0으로 초기화해서 베팅존 재등장 방지
+      Object.values(seatMap).forEach(p=>{ if(p) p.current_bet=0; });
+      renderAllSeats(Object.values(seatMap), true); // bet zone 스킵
+
+      startCommunityRevealGate(2000);
+      showOverlay('🃏 올인 쇼다운');
+      setTimeout(hideOverlay,1800);
+    })();
   }
 
   else if(e==='showdown'){
@@ -1224,58 +1380,76 @@ function handle(ev){
     dealAnimating=false;pendingDeal=false;pendingActionEv=null;
     const res=ev.results||[];
     const potResults=ev.pot_results||[];
-    res.forEach(r=>{
-      if(r.player_id!==myId && r.cards?.length) revealMap[r.player_id]=r.cards;
-    });
-    renderAllSeats(Object.values(seatMap));
-    startCommunityRevealGate(1800);
-    // 사이드팟 시 팟박스 업데이트
-    setTimeout(()=>{
-      renderComm(ev.community_cards||[]);
-    if(potResults.length>1){
-      const pb=id('pot-box');
-      if(pb){
-        pb.classList.add('multi');
-        pb.style.display='flex';
-        pb.innerHTML=potResults.map((pr,i)=>
-          `<div class="pot-row">
-            <div class="pot-row-chips" data-amt="${pr.amount}"></div>
-            <span class="pot-row-label${i>0?' side':''}">${pr.label}&nbsp;${pr.amount.toLocaleString()}</span>
-           </div>`
-        ).join('');
-        pb.querySelectorAll('.pot-row-chips').forEach(el=>{
-          renderChips(el,parseInt(el.dataset.amt),16,7,3);
-        });
+    (async()=>{
+      // 1. 남은 베팅 → 팟으로 수거
+      const remainingBets=lastBetSnapshot.reduce((s,b)=>s+(b.amount||0),0);
+      const potTotal=potResults.reduce((s,p)=>s+(p.amount||0),0)||displayedPotAmount+remainingBets||pot;
+      if(remainingBets>0){
+        await animateBetsToPot(lastBetSnapshot,potTotal,potResults.length>1?potResults:[]);
+      } else {
+        displayedPotAmount=potTotal;
+        renderDisplayedPot(potResults.length>1?potResults:[]);
       }
-    }
-    const myRes=res.find(r=>r.player_id===myId);
-    const isWin=(myRes?.won||0)>0;
-    // 메인팟 수령자(최다 획득 칩) 기준으로 카드 하이라이트
-    const winner=res.reduce((best,r)=>r.won>(best?.won||0)?r:best,null);
-    if(winner)highlightHand(winner.best_hand||[],winner.hand_rank||'');
-    // 사이드팟 유무에 따라 결과 표시 방식 분기
-    if(potResults.length>1){
-      showResultSequence(potResults,myId);
-    } else {
-      if(isWin)playWinSound();
-      const winNick=winner?.nickname||winner?.player_id||'?';
-      showResult(winNick,winner?.hand_rank||'',winner?.won||0,isWin);
-    }
-    myCards=[];currentTurnPid=null;
-    const resetDelay=potResults.length>1 ? potResults.length*3000+700 : 6500;
-    scheduleCardReset(resetDelay);
-    },1800);
+
+      // 2. 모든 플레이어 홀카드 공개 + 커뮤니티 카드 표시
+      res.forEach(r=>{
+        if(r.player_id!==myId && r.cards?.length) revealMap[r.player_id]=r.cards;
+      });
+      // seatMap current_bet 초기화 → 베팅존 재등장 방지
+      Object.values(seatMap).forEach(p=>{ if(p) p.current_bet=0; });
+      renderAllSeats(Object.values(seatMap), true); // bet zone 스킵
+      renderComm(ev.community_cards||[]);
+      await sleep(1000);
+
+      // 3. 승리패 하이라이트
+      const myRes=res.find(r=>r.player_id===myId);
+      const isWin=(myRes?.won||0)>0;
+      const winner=res.reduce((best,r)=>r.won>(best?.won||0)?r:best,null);
+      if(winner)highlightHand(winner.best_hand||[],winner.hand_rank||'');
+      await sleep(1000);
+
+      // 4. 메인팟 → 세컨팟 → 서드팟 순서로 순차 이동
+      if(potResults.length){
+        for(let i=0;i<potResults.length;i++){
+          await animatePotResultToWinner(potResults[i],0);
+          await sleep(800);
+        }
+        displayedPotAmount=0;
+        renderDisplayedPot([]);
+        showResultSequence(potResults,myId);
+      } else if(winner){
+        await animatePotToWinner(winner.player_id,displayedPotAmount||winner.won||pot);
+        await sleep(300);
+        if(isWin)playWinSound();
+        showResult(winner.nickname||winner.player_id||'?',winner.hand_rank||'',winner.won||0,isWin);
+      }
+
+      myCards=[];currentTurnPid=null;
+      const resetDelay=potResults.length>1 ? potResults.length*3200+700 : 6500;
+      scheduleCardReset(resetDelay);
+    })();
   }
 
   else if(e==='hand_end'){
     stopTimer();disableActions();
     dealAnimating=false;pendingDeal=false;pendingActionEv=null;
     const won=ev.winner,isMe=won===myId;
-    if(isMe)playWinSound();
     const wNick=ev.winner_nickname||getPlayerNick(won)||won||'?';
-    showResult(wNick,isMe?'상대 폴드':'내가 폴드',ev.amount||0,isMe);
-    myCards=[];renderMyCards([]);currentTurnPid=null;
-    scheduleCardReset();
+    const remainingBets=lastBetSnapshot.reduce((s,b)=>s+(b.amount||0),0);
+    const payoutAmount=ev.amount||displayedPotAmount+remainingBets||pot;
+    (async()=>{
+      if(remainingBets>0){
+        await animateBetsToPot(lastBetSnapshot,payoutAmount,[]);
+      } else {
+        displayedPotAmount=payoutAmount;
+        renderDisplayedPot([]);
+      }
+      await animatePotToWinner(won,payoutAmount);
+      if(isMe)playWinSound();
+      showResult(wNick,isMe?'상대 폴드':'내가 폴드',ev.amount||0,isMe);
+      myCards=[];renderMyCards([]);currentTurnPid=null;
+      scheduleCardReset();
+    })();
   }
 
   else if(e==='game_over'){
@@ -1320,12 +1494,10 @@ function applyState(ev){
   }
 
   id('phase-label').textContent=PL(phase);
-
-  const pb=id('pot-box');
   const livePots=ev.live_pots||[];
-  renderPotBox(pb, livePots, pot, plist);
-
-  renderCommWithGate(comm);
+  const streetBets=plist.reduce((s,p)=>s+(p.current_bet||0),0);
+  const prevBets=lastBetSnapshot.filter(b=>b.amount>0);
+  const shouldCollect=prevBets.length>0&&streetBets===0&&pot>displayedPotAmount&&!potCollecting;
 
   // Update seat map
   seatMap={};
@@ -1339,7 +1511,23 @@ function applyState(ev){
     setMyInfo(me.nickname||myNick,myStack,myBet);
   }
 
-  renderAllSeats(plist);
+  if(shouldCollect){
+    animateBetsToPot(prevBets,pot,livePots).then(()=>renderCommWithGate(comm));
+  } else if(!potCollecting) {
+    renderCommWithGate(comm);
+    if(streetBets===0)displayedPotAmount=pot;
+    renderDisplayedPot(streetBets===0?livePots:[]);
+  } else {
+    renderCommWithGate(comm);
+  }
+  // 팟 수거 애니메이션 중에는 베팅존 재렌더 금지 (bet zone이 다시 뜨는 현상 방지)
+  renderAllSeats(plist, potCollecting);
+  lastBetSnapshot=plist.map(p=>({
+    seat_index:p.seat_index,
+    player_id:p.player_id,
+    vpos:vposOf(p.seat_index),
+    amount:p.current_bet||0
+  }));
   updateSliderRange();
 }
 

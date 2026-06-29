@@ -249,8 +249,19 @@ class GameState:
     def _advance_phase(self, active: list[str], _reveal_sent: bool = False) -> list[dict]:
         events: list[dict] = []
 
-        # collect bets into pot
-        round_pot = sum(self.betting_round.current_bets.values())
+        # collect bets into pot — uncalled bet은 즉시 반환
+        street_contributions = {
+            pid: self.betting_round.current_bets.get(pid, 0)
+            for pid in self.betting_round.players
+        }
+        _, uncalled = compute_pots(street_contributions,
+                                   folded_pids=self.betting_round.folded)
+        for pid, amt in uncalled.items():
+            if pid in self.seats:
+                self.seats[pid].stack += amt
+                street_contributions[pid] -= amt
+
+        round_pot = sum(street_contributions.values())
         self.pot += round_pot
         for pid in self.betting_round.players:
             self.seats[pid].total_contribution += self.betting_round.total_contributions.get(pid, 0)
